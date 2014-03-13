@@ -12,13 +12,6 @@ from openmdao.lib.datatypes.api import Float, Int, Str, Slot, List, Array
 from spacecraft import Spacecraft
 from maneuver import Maneuver, Orbit
 
-try:
-    import svgwrite as svg
-except ImportError:
-    svg = None
-
-log_enabled = False
-
 
 class Phase(Component):
     """ A phase of a mission. """

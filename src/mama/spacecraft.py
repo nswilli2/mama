@@ -112,7 +112,7 @@ class Stage(Subsystem):
             raise Exception(self, 'has multiple RCS')
         else:
             propsystem = self.get(propsystem[0])
-            self.log('      expending', prop, 'kg of prop from', self.name, propsystem.name)
+            self.log('    expending', prop, 'kg of prop from', self.name, propsystem.name)
             propsystem.expend_prop(prop)
             self.update_wet_mass()
 

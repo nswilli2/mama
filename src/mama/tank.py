@@ -93,7 +93,7 @@ class Tank(Subsystem):
         self.log('Executing tank, capacity =', self.capacity, 'kg')
 
         self.volume = (1 + self.ullage) * self.capacity/self.fuel_density  # m**3
-        self.log('volume = ', self.volume, 'm^3 (', self.volume*m3_to_f3, 'ft^3)')
+        self.log('    volume = ', self.volume, 'm^3 (', self.volume*m3_to_f3, 'ft^3)')
 
         # assume wall thickness = 0.1m
         self.inner_diameter = self.diameter - (self.thickness * 2)

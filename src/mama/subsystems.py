@@ -191,8 +191,8 @@ class FuelSubsystem(Subsystem):
         """
         self._dropped = False
         self.total_boiloff = 0
-        self.log('  ', self.parent.name, self.name,
-                'capacity:', self.capacity)
+        self.log(self.parent.name, self.name,
+                 'capacity:', self.capacity)
         super(FuelSubsystem, self).execute()
 
     def get_fuel(self):
@@ -240,8 +240,8 @@ class FuelSubsystem(Subsystem):
         if not self._dropped and self.tank.fuel > 0:
             boil_off = self.tank.capacity * self.boil_off_rate/30.5 * duration
             self.log('    ', self.parent.name, self.name, self.tank.fuel,
-                    'boil_off @ %2.2f%% per day:' % (100*self.boil_off_rate/30.5),
-                     boil_off)
+                     'boil_off @ %2.2f%% per day:' % (100*self.boil_off_rate/30.5),
+                      boil_off)
             boil_off = min(boil_off, self.tank.fuel)
             self.expend_fuel(boil_off)
             self.total_boiloff += boil_off
@@ -250,7 +250,7 @@ class FuelSubsystem(Subsystem):
             return boil_off
         else:
             self.log('    ', self.parent.name, self.name, self.tank.fuel,
-                    'no boil off')
+                     'no boil off')
             return 0
 
     def drop(self):

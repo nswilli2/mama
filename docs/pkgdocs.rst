@@ -10,6 +10,23 @@ Package Metadata
 
 - **description-file:** README.txt
 
+- **entry_points**:: 
+
+    [openmdao.component]
+    mama.subsystem.Summation=mama.subsystem:Summation
+    mama.maneuver.Maneuver=mama.maneuver:Maneuver
+    mama.mission.Mission=mama.mission:Mission
+    mama.maneuver.Orbit=mama.maneuver:Orbit
+    mama.subsystem.Subsystem=mama.subsystem:Subsystem
+    mama.mission.Phase=mama.mission:Phase
+    [openmdao.container]
+    mama.subsystem.Summation=mama.subsystem:Summation
+    mama.maneuver.Maneuver=mama.maneuver:Maneuver
+    mama.mission.Mission=mama.mission:Mission
+    mama.maneuver.Orbit=mama.maneuver:Orbit
+    mama.subsystem.Subsystem=mama.subsystem:Subsystem
+    mama.mission.Phase=mama.mission:Phase
+
 - **keywords:** openmdao
 
 - **name:** mama

@@ -1,0 +1,3 @@
+graft src/mama/sphinx_build/html
+recursive-include src/mama/test *.py
+

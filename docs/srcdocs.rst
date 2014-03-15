@@ -85,19 +85,6 @@ subsystems.py
    :show-inheritance:
 
         
-.. index:: tank.py
-
-.. _mama.tank.py:
-
-tank.py
--------
-
-.. automodule:: mama.tank
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-        
 .. index:: test_SKB00.py
 
 .. _mama.test.test_SKB00.py:

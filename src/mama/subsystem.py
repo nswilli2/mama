@@ -56,7 +56,7 @@ class Subsystem(Assembly):
     description = Str(iotype='in',
         desc='description of the subsystem')
 
-    fixed_mass = Float(0.0, iotype='in',
+    fixed_mass = Float(0.0, iotype='in', units='kg',
         desc='fixed hardware mass ("overhead") of subsystem')
 
     mass_category = Str('S', iotype='in',

@@ -190,8 +190,8 @@ class Stage(Subsystem):
         burn_time = (fuel_nominal*Isp/TW)/60.0
 
         self.log('    thrust/weight, initial = %1.3f\n' % TW,
-                '    thrust/weight, final = %1.3f\n' % TWfinal,
-                '    burn time = %1.3f' % burn_time)
+                 '    thrust/weight, final = %1.3f\n' % TWfinal,
+                 '    burn time = %1.3f' % burn_time)
 
         return burn_time
 
@@ -433,7 +433,9 @@ class Spacecraft(Subsystem):
         self.log('    final mass =', mass)
         self.log('    thrust/weight: initial = %1.3f' % TW, ', final = %1.3f\n' % TWfinal)
 
-        burn_time = (fuel_nominal*Isp/TW)/60.0
+        # burn_time = (fuel_nominal*Isp/TW)/60.0
+        mdot = thrust / (Isp * g)
+        burn_time = fuel_nominal / mdot
         self.log('    burn time = %1.3f' % burn_time)
 
         return burn_time

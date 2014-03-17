@@ -224,7 +224,7 @@ class Mission(Assembly):
     def configure(self):
         """ link up the spacecraft and mission phases in order
         """
-        print "Mission.configure()"
+        # print "Mission.configure()"
 
         if self.spacecraft is None:
             # put a temporary placeholder spacecraft in the Slot

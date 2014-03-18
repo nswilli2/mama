@@ -11,7 +11,7 @@ from openmdao.main.api import Component, Assembly
 from openmdao.lib.datatypes.api import Str, Float, Array
 from openmdao.main.mp_support import has_interface
 
-from mga import get_MGA
+import mga
 
 
 class Summation(Component):
@@ -124,7 +124,7 @@ class Subsystem(Assembly):
         if len(self.driver.workflow) > 0:
             super(Subsystem, self).execute()
 
-        self.dwc = get_MGA(self.mass_category, self.mass_maturity)
+        self.dwc = mga.get_MGA(self.mass_category, self.mass_maturity)
         self.update_dry_mass()
         self.update_wet_mass()
         # print '%10s %10s Dry Mass: %5.2f (%2d%% MGA), Wet Mass: %5.2f' \
@@ -189,11 +189,19 @@ class Subsystem(Assembly):
         """
         wetness = self.wet_mass - self.dry_mass
         if wetness == 0:
-            print >>output, '%s%-15s\tfixed:%10.2f\tdry:%10.2f\twet:%10.2f' \
-                % ('  '*indent, self.name, self.fixed_mass*(1+self.dwc), self.dry_mass, self.wet_mass)
+            if (mga.MGA_enabled):
+                print >>output, '%s%-15s\tfixed (%2.f%% dwc):%10.2f\tdry:%10.2f\twet:%10.2f' \
+                    % ('  '*indent, self.name, self.dwc*100, self.fixed_mass*(1+self.dwc), self.dry_mass, self.wet_mass)
+            else:
+                print >>output, '%s%-15s\tfixed:%10.2f\tdry:%10.2f\twet:%10.2f' \
+                    % ('  '*indent, self.name, self.fixed_mass*(1+self.dwc), self.dry_mass, self.wet_mass)
         else:
-            print >>output, '%s%-15s\tfixed:%10.2f\tdry:%10.2f\twet:%10.2f\t(%10.2f)' \
-                % ('  '*indent, self.name, self.fixed_mass*(1+self.dwc), self.dry_mass, self.wet_mass, wetness)
+            if (mga.MGA_enabled):
+                print >>output, '%s%-15s\tfixed (%2.f%% dwc):%10.2f\tdry:%10.2f\twet:%10.2f\t(%10.2f)' \
+                    % ('  '*indent, self.name, self.dwc*100, self.fixed_mass*(1+self.dwc), self.dry_mass, self.wet_mass, wetness)
+            else:
+                print >>output, '%s%-15s\tfixed:%10.2f\tdry:%10.2f\twet:%10.2f\t(%10.2f)' \
+                    % ('  '*indent, self.name, self.fixed_mass*(1+self.dwc), self.dry_mass, self.wet_mass, wetness)
 
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:

@@ -168,7 +168,7 @@ class Maneuver(Component):
     mass = Float(0.0, iotype='in',
         desc='mass of the vehicle at the start of the maneuver')
 
-    dV = Float(0.0, iotype='in',
+    dV = Float(0.0, iotype='in', units='km/s',
         desc='fixed delta-V for phase (RCS, MCC, etc.)')
 
     bulk_reserve = Float(0.0, iotype='in',
@@ -190,10 +190,10 @@ class Maneuver(Component):
     gravloss_data = Int(iotype='in',
         desc='gravity loss data set to use (1-16) for burn')
 
-    g = Float(9.8062E-3, iotype='in',
+    g = Float(9.8062E-3, iotype='in', units='km/s',
         desc='acceleration due to gravity')
 
-    C3 = Float(0.0, iotype='in',
+    C3 = Float(0.0, iotype='in',  # units='km^2/s^2',
         desc='C3 incoming/outgoing for maneuver, requires apoapsis and periapsis'
              'to calculate required periapsis velocity change')
 

@@ -51,7 +51,8 @@ class Stage(Subsystem):
         fuelsystem = self.get_children(IFuelSystem)
         # self.log('  ', self.description, 'add fuel to fuelsystem:', fuelsystem)
         if len(fuelsystem) < 1:
-            self.log('  ', self.name, 'has no fuel tank')
+            # self.log('  ', self.name, 'has no fuel tank')
+            pass
         elif len(fuelsystem) > 1:
             raise Exception(self, 'has multiple fuel tanks')
         else:
@@ -357,7 +358,7 @@ class Spacecraft(Subsystem):
             ratio of the burn and the burn duration (in minutes).
         """
 
-        if dV > 0.1:
+        if dV > 0.15:
             # use main propulsion
             prop_stage = self.get_stage(0)
             prop_systems = prop_stage.get_children(IPropulsion)
@@ -429,8 +430,8 @@ class Spacecraft(Subsystem):
             self.expend_prop(stage, fuel_burn)
 
         # final thrust to weight & burn time
-        TWfinal = thrust/(mass - fuel_nominal)
-        self.log('    final mass =', mass)
+        TWfinal = thrust/(mass - fuel_burn)
+        self.log('    final mass (nominal) =', mass - fuel_nominal)
         self.log('    thrust/weight: initial = %1.3f' % TW, ', final = %1.3f\n' % TWfinal)
 
         # burn_time = (fuel_nominal*Isp/TW)/60.0

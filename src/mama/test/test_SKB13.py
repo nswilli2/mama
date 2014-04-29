@@ -3,9 +3,7 @@ import unittest
 import StringIO
 import logging
 
-from openmdao.util.testutil import assert_rel_error
-
-from mama.maneuver import *
+from mama.orbit import Orbit
 
 
 class SKB13TestCase(unittest.TestCase):

@@ -3,9 +3,8 @@ import unittest
 import StringIO
 import logging
 
-from openmdao.util.testutil import assert_rel_error
-
-from mama.maneuver import *
+from mama.orbit import Orbit
+from mama.maneuver import Maneuver
 
 
 class GravLossTestCase(unittest.TestCase):

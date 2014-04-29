@@ -366,6 +366,8 @@ class Spacecraft(Subsystem):
             # use RCS from the specified stage
             prop_stage = self.get_stage(stage)
             prop_systems = prop_stage.get_children(IRCS)
+            # note from McCurdy e-mail, 2012/11/28: "for all RCS burns is I include a
+            # startup loss of 1% of the actual propellant.  So an additional 1% is lost.""
 
         prop_system = prop_stage.get(prop_systems[0])
         thrust = prop_system.thrust

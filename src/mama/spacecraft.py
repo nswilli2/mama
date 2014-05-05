@@ -189,10 +189,12 @@ class Stage(Subsystem):
         # final thrust to weight & burn time
         TWfinal = thrust/(mass - fuel_nominal)
         burn_time = (fuel_nominal*Isp/TW)/60.0
+        burn_time = (thrust/Isp)/60.0
 
         self.log('    thrust/weight, initial = %1.3f\n' % TW,
                  '    thrust/weight, final = %1.3f\n' % TWfinal,
-                 '    burn time = %1.3f' % burn_time)
+                 '    burn time = %1.3f min' % (fuel_nominal*Isp/TW)/60.0,
+                 '    burn time = %1.3f min' % (thrust/Isp)/60.0)
 
         return burn_time
 
@@ -216,20 +218,20 @@ class Spacecraft(Subsystem):
         self.add_fuel()  # fill all fuel tanks to capacity
         super(Spacecraft, self).execute()
         self.log('')
-        self.log(self)
+        self.log(self.__str__(show_equipment=True))
 
-    def __str__(self):
+    def __str__(self, show_equipment=False):
         output = StringIO.StringIO()
-        self.display(output=output)
+        self.display(output=output, show_equipment=show_equipment)
         return output.getvalue()
 
-    def display(self, indent=0, output=sys.stdout):
+    def display(self, indent=0, output=sys.stdout, show_equipment=False):
         """ displays details about the spacecraft.
         """
         print >>output, '%s%-20.20s\tdry:%10.2f\twet:%10.2f' \
             % ('  '*indent, self.name, self.dry_mass, self.wet_mass)
         for stage in self.stages:
-            stage.display(indent+1, output=output)
+            stage.display(indent+1, output=output, show_equipment=show_equipment)
             print >>output, ''
 
         # extra: display total fuel boiloff

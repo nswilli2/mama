@@ -174,7 +174,7 @@ class Phase(Component):
             spacecraft.pickup_mass(self.pickup_stage, self.pickup_mass)
             mass_effect = True
 
-        # update mass for the spacecraft
+        # update mass for the spacecraft and display
         if mass_effect:
             self.parent.spacecraft.update_wet_mass()
             self.log('')
@@ -276,7 +276,7 @@ class Mission(Assembly):
         print >>output, 'Mission:', self.description
         print >>output, ''
         if self.spacecraft is not None:
-            self.spacecraft.display(output=output)
+            self.spacecraft.display(output=output, show_equipment=True)
         else:
             print >>output, 'No spacecraft is assigned.'
         print >>output, ''

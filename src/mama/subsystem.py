@@ -7,29 +7,11 @@ import logging
 
 from zope.interface import Interface
 
-from openmdao.main.api import Component, Assembly
-from openmdao.lib.datatypes.api import Str, Float, Array
+from openmdao.main.api import Assembly
+from openmdao.lib.datatypes.api import Str, Float, Dict
 from openmdao.main.mp_support import has_interface
 
 import mga
-
-
-class Summation(Component):
-    """ A component that sums it's input values
-    """
-
-    inputs = Array(dtype=Float, iotype='in',
-        desc='list of input values to be summed')
-
-    output = Float(0.0, iotype='out',
-        desc='sum of input values')
-
-    def __init__(self):
-        super(Summation, self).__init__()
-        self.force_execute = True
-
-    def execute(self):
-        self.output = sum(self.inputs)
 
 
 class Subsystem(Assembly):
@@ -65,6 +47,9 @@ class Subsystem(Assembly):
     mass_maturity = Str('L', iotype='in',
         desc='mass maturity (per MGA table)')
 
+    equipment_list = Dict(iotype='in',
+        desc='dictionary of equipment masses')
+
     # outputs
 
     dry_mass = Float(0., iotype='out', units='kg',
@@ -81,39 +66,23 @@ class Subsystem(Assembly):
 
     # methods
 
-    def add_summation(self, subsystems, name):
-        """ add a summation component to calculate the named output
-            as a summation of that output from the subsystems
-        """
-        summation = Summation()
-        summation.inputs.resize(len(subsystems))
-        sum_name = '%s_%s' % ('sum', name)
-        self.add(sum_name, summation)
-        self.add_to_workflow([sum_name])
-
-        i = 0
-        for subsystem in subsystems:
-            inputs_i = '%s.inputs[%d]' % (sum_name, i)
-            self.connect('%s.%s' % (subsystem, name), inputs_i)
-            i = i + 1
-        self.connect(sum_name + '.output', name)
-
     def configure(self):
         """ if subsystem has child subsystems, add a Summation component.
         """
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:
             self.add_to_workflow(subsystems)
-            # self.add_summation(subsystems, 'dry_mass')
-            # self.add_summation(subsystems, 'wet_mass')
 
-            # this SHOULD work the same:
             dry_masses = [subsystem + '.dry_mass' for subsystem in subsystems]
             wet_masses = [subsystem + '.wet_mass' for subsystem in subsystems]
-            # print self.name+'.connect('+'+'.join(dry_masses)+", 'dry_mass')"
-            # print self.name+'.connect('+'+'.join(wet_masses)+", 'wet_mass')"
+
             self.connect('+'.join(dry_masses), 'dry_mass')
             self.connect('+'.join(wet_masses), 'wet_mass')
+
+        # if fixed mass is not specified, roll it up from equipment list
+        if self.fixed_mass == 0:
+            for name in self.equipment_list:
+                self.fixed_mass += self.equipment_list[name]
 
         super(Subsystem, self).configure()
 
@@ -184,29 +153,51 @@ class Subsystem(Assembly):
                       'does not have property', prop, 'for summation'
         return total
 
-    def display(self, indent=0, output=sys.stdout):
+    def display(self, indent=0, output=sys.stdout, show_equipment=False):
         """ display details about the subsystem
         """
         wetness = self.wet_mass - self.dry_mass
         if wetness == 0:
             if (mga.MGA_enabled):
-                print >>output, '%s%-15s\tfixed (%2.f%% dwc):%10.2f\tdry:%10.2f\twet:%10.2f' \
+                print >>output, '%s%-15sfixed (%2.f%% dwc):%10.2f\tdry:%10.2f\twet:%10.2f' \
                     % ('  '*indent, self.name, self.dwc*100, self.fixed_mass*(1+self.dwc), self.dry_mass, self.wet_mass)
             else:
-                print >>output, '%s%-15s\tfixed:%10.2f\tdry:%10.2f\twet:%10.2f' \
+                print >>output, '%s%-15sfixed:%10.2f\tdry:%10.2f\twet:%10.2f' \
                     % ('  '*indent, self.name, self.fixed_mass*(1+self.dwc), self.dry_mass, self.wet_mass)
         else:
             if (mga.MGA_enabled):
-                print >>output, '%s%-15s\tfixed (%2.f%% dwc):%10.2f\tdry:%10.2f\twet:%10.2f\t(%10.2f)' \
+                print >>output, '%s%-15sfixed (%2.f%% dwc):%10.2f\tdry:%10.2f\twet:%10.2f\t(%10.2f)' \
                     % ('  '*indent, self.name, self.dwc*100, self.fixed_mass*(1+self.dwc), self.dry_mass, self.wet_mass, wetness)
             else:
-                print >>output, '%s%-15s\tfixed:%10.2f\tdry:%10.2f\twet:%10.2f\t(%10.2f)' \
+                print >>output, '%s%-15sfixed:%10.2f\tdry:%10.2f\twet:%10.2f\t(%10.2f)' \
                     % ('  '*indent, self.name, self.fixed_mass*(1+self.dwc), self.dry_mass, self.wet_mass, wetness)
+
+        if show_equipment:
+            for key in self.equipment_list:
+                val =  self.equipment_list[key]
+                if not isinstance(val, dict):
+                    print >>output, '%s%-30s%10.2f' \
+                        % ('  '*(indent+1), key, val)
 
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:
             for subsystem in subsystems:
-                self.get(subsystem).display(indent+1, output)
+                self.get(subsystem).display(indent+1, output, show_equipment)
+
+    def add_equipment(self, name, mass):
+        self.equipment_list[name] = mass
+
+    def get_equipment_list(self):
+        el = self.equipment_list
+        if len(el) == 0:
+            if self.fixed_mass > 0:
+                el['fixed_mass'] = self.fixed_mass
+
+        subsystems = self.get_children(Subsystem)
+        if len(subsystems) > 0:
+            for subsystem in subsystems:
+                el[subsystem] = self.get(subsystem).get_equipment_list()
+        return el
 
     def log(self, *args):
         logger = logging.getLogger('mission')

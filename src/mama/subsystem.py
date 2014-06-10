@@ -31,6 +31,8 @@ class Subsystem(Assembly):
 
         This class is intended to be extended to reflect the characteristics
         of specific subsystems.
+
+        Mass properties (center of gravity and moments of inertia) are in the process of being added
     """
 
     # inputs
@@ -51,47 +53,66 @@ class Subsystem(Assembly):
         desc='dictionary of equipment masses')
 
     x = Float(0.0, iotype='in', units='m',
-        desc='distance from tail of rocket')
+        desc='distance from end of stage of the center of gravity of the subsystem')
 
     y = Float(0.0, iotype='in', units='m',
-        desc='distance from center line')
+        desc='distance from center line of the center of gravity of the subsystem')
 
     z = Float(0.0, iotype='in', units='m',
-        desc='distance from center line')
+        desc='distance from center line of the center of gravity of the subsystem')
+
+    xstage = FLoat(0.0, iotype='in', units='m',
+        desc='stage distance from end of rocket')
+
+    #Length, radius and shape are needed to calculate Ioxx, Ioyy, Iozz for components (See Columns W-AA of Excel sheet)
+    #L = Float(0.0, iotype='in', units='m',
+    #    desc='effective length of subsystem'))
+
+    #r = Float(0.0, iotype='in', units='m',
+    #    desc='effective radius of subsystem')
+
+    #shape = Enum('Solid_Cylinder', ('Solid_Cylinder','Hollow_Thin-Wall_Cylinder', 'Other'),
+    #    iotype='in', desc='Shape of subsystem'
 
     # outputs
 
     dry_mass = Float(0., iotype='out', units='kg',
-         desc='calculated dry mass of subsystem in kg')
+        desc='calculated dry mass of subsystem in kg')
 
     dwc = Float(0.0, iotype='out',
         desc='dry weight contingency (based on mass category and maturity)')
 
     wet_mass = Float(0., iotype='out', units='kg',
-         desc='calculated wet mass of subsystem in kg')
+        desc='calculated wet mass of subsystem in kg')
 
     power_usage = Float(0., iotype='out', units='kW',
-         desc='calculated electrical power used by subsystem')
+        desc='calculated electrical power used by subsystem')
 
-    #Cg = List(dtype=Float, iotype='out', desc='center of gravity (x,y,z) with respect to base (stage)')
-#
-    #Mx = FLoat(0.0,iotype='out', desc='moment about x axis')
-#
-    #My = FLoat(0.0,iotype='out', desc='moment about y axis')
-#
-    #Mz = FLoat(0.0,iotype='out', desc='moment about z axis')
-#
-    #Ixx = Float(0.0,iotype='out', desc='moment of inertia around x axis')
-#
-    #Iyy = Float(0.0,iotype='out', desc='moment of inertia around y axis')
-#
-    #Izz = Float(0.0,iotype='out', desc='moment of inertia around z axis')
+    Cg = List([0.0, 0.0, 0.0], iotype='out', 
+        desc='center of gravity (x,y,z) of subsystem')
+
+    Mx = FLoat(0.0,iotype='out', 
+        desc='moment about x axis')
+
+    My = FLoat(0.0,iotype='out', 
+        desc='moment about y axis')
+
+    Mz = FLoat(0.0,iotype='out', 
+        desc='moment about z axis')
+
+    Ixx = Float(0.0,iotype='out', 
+        desc='moment of inertia around x axis')
+
+    Iyy = Float(0.0,iotype='out',
+        desc='moment of inertia around y axis')
+
+    Izz = Float(0.0,iotype='out', 
+        desc='moment of inertia around z axis')
 
     # methods
 
     def configure(self):
-        """ if subsystem has child subsystems, add a Summation component.
-        """
+        """ if subsystem has child subsystems, add a Summation component."""
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:
             self.add_to_workflow(subsystems)
@@ -107,11 +128,9 @@ class Subsystem(Assembly):
             for name in self.equipment_list:
                 self.fixed_mass += self.equipment_list[name]
 
-        if x == 0 and y == 0 and z == 0:
-            for name in self.equipment_list:
-                self.x += self.equipment_list[name + '.x']
-                self.y += self.equipment_list[name + '.y']
-                self.z += self.equipment_list[name + '.z']
+        #Bring down xstage from stage
+        #from spacecraft.stage import xstage 
+        #self.xstage = xstage
 
         super(Subsystem, self).configure()
 
@@ -125,12 +144,11 @@ class Subsystem(Assembly):
         self.dwc = mga.get_MGA(self.mass_category, self.mass_maturity)
         self.update_dry_mass()
         self.update_wet_mass()
-        #self.get_mass_properties()
+        self.get_mass_properties()
 
         # print '%10s %10s Dry Mass: %5.2f (%2d%% MGA), Wet Mass: %5.2f' \
         #     % (self.parent.name, self.name, self.dry_mass, self.dwc*100, self.wet_mass)
-
-        
+  
     def update_dry_mass(self):
         """ Update the dry mass of the subsystem.
             The default dry mass calculation is to multiply the fixed mass
@@ -217,21 +235,17 @@ class Subsystem(Assembly):
 
         #Need changes to include mass porperties
 
-    def add_equipment(self, name, mass, Cg):
+    def add_equipment(self, name, mass, Cgwrtstage):
         self.equipment_list[name] = mass
-        self.equipment_list[name + '.x'] = Cg[0]
-        self.equipment_list[name + '.y'] = Cg[1]
-        self.equipment_list[name + '.z'] = Cg[2]
+        self.equipment_list[name + '.x'] = Cgwrtstage[0]
+        self.equipment_list[name + '.y'] = Cgwrtstage[1]
+        self.equipment_list[name + '.z'] = Cgwrtstage[2]
 
     def get_equipment_list(self):
         el = self.equipment_list
         if len(el) == 0:
             if self.fixed_mass > 0:
                 el['fixed_mass'] = self.fixed_mass
-            if self.x > 0 or self.y > 0 or self.z > 0:
-                el['x'] = self.x
-                el['y'] = self.y
-                el['z'] = self.z
 
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:
@@ -239,41 +253,49 @@ class Subsystem(Assembly):
                 el[subsystem] = self.get(subsystem).get_equipment_list()
         return el
 
-   #def get_mass_properties(self):
-   #    """ calculate mass properties """
-   #    Cg = 0
-   #    Mx = 0
-   #    My = 0
-   #    Mz = 0
-   #    Ixx = 0
-   #    Iyy = 0
-   #    Izz = 0
-   #    
-   #    subsystems = self.get_children(Subsystem)
-   #    if len(subsystems) > 0:
-   #        """roll up properties from subsystems """
-   #        for subsystem in subsystems:
-   #            self.get(subsystem).get_mass_properties()
-   #            self.Mx += (subsystem.dry_mass*subsystem.x)
-   #            self.My += (subsystem.dry_mass*subsystem.y)
-   #            self.Mz += (subsystem.dry_mass*subsystem.z)
-   #        moments = [self.Mx,self.My,self.Mz]
-   #        self.Cg = [x/self.dry_mass for x in moments]
-   #        self.Ixx = self.dry_mass*((self.Cg[1])**2 + (self.Cg[2])**2)
-   #        self.Iyy = self.dry_mass*((self.Cg[0])**2 + (self.Cg[2])**2)
-   #        self.Izz = self.dry_mass*((self.Cg[0])**2 + (self.Cg[1])**2)
-   #    else
-   #        self.Cg = [self.x,self.y,self.z]
-   #        self.Mx = self.x*self.dry_mass
-   #        self.My = self.y*self.dry_mass
-   #        self.Mz = self.z*self.dry_mass
-   #        self.Ixx = self.dry_mass*((self.y)**2 + (self.z)**2)
-   #        self.Iyy = self.dry_mass*((self.x)**2 + (self.z)**2)
-   #        self.Izz = self.dry_mass*((self.x)**2 + (self.y)**2)
+   def get_mass_properties(self):
+        """ calculate mass properties """
+        Cg = 0
+        Mx = 0
+        My = 0
+        Mz = 0
+        Ixx = 0
+        Iyy = 0
+        Izz = 0
+        
+        subsystems = self.get_children(Subsystem)
+        if len(subsystems) > 0:
+            """roll up properties from subsystems """
+            for subsystem in subsystems:
+                self.get(subsystem).get_mass_properties()
+                self.Mx += (subsystem.dry_mass*subsystem.x)
+                self.My += (subsystem.dry_mass*subsystem.y)
+                self.Mz += (subsystem.dry_mass*subsystem.z)
+            moments = [self.Mx,self.My,self.Mz]
+            self.Cg = [moment/self.dry_mass for moment in moments]
+            self.Ixx = self.dry_mass*((self.Cg[1])**2 + (self.Cg[2])**2)
+            self.Iyy = self.dry_mass*((self.Cg[0])**2 + (self.Cg[2])**2)
+            self.Izz = self.dry_mass*((self.Cg[0])**2 + (self.Cg[1])**2)
+        else:
+            #Ioxx, Ioyy, Iozz depends on shape, length, radius
+            #if shape == 'Solid_Cylinder':
+            #    #calculations
+            #elif shape == 'Hollow_Thin-Wall_Cylinder':
+            #    #calculations
+            #else:
+            #    #Other: need Cg calculated elsewhere
+            self.Cg = [self.x, self.y, self.z]
+            self.Mx = self.x*self.dry_mass
+            self.My = self.y*self.dry_mass
+            self.Mz = self.z*self.dry_mass
+            self.Ixx = self.dry_mass*((self.y)**2 + (self.z)**2)
+            self.Iyy = self.dry_mass*((self.x)**2 + (self.z)**2)
+            self.Izz = self.dry_mass*((self.x)**2 + (self.y)**2)    
 
-   #    """transform mass properties with respect to this subsystems coordinates"""
-   #    return (Cg, Mx, My, Mz, Ixx, Iyy, Izz)
-
+        """transform mass properties with respect to this subsystems coordinates"""
+        #Transforming mass properties with respect to stage, using xstage
+        #May only want to do this as a part of the Stage class, not for every subsystem
+        return (Cg, Mx, My, Mz, Ixx, Iyy, Izz)
 
     def log(self, *args):
         logger = logging.getLogger('mission')

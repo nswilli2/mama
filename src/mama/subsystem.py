@@ -2,6 +2,7 @@
    subsystem.py
 """
 
+
 import sys
 import logging
 
@@ -91,10 +92,10 @@ class Subsystem(Assembly):
     Mx = FLoat(0.0,iotype='out', 
         desc='moment about x axis')
 
-    My = FLoat(0.0,iotype='out', 
+    My = Float(0.0,iotype='out', 
         desc='moment about y axis')
 
-    Mz = FLoat(0.0,iotype='out', 
+    Mz = Float(0.0,iotype='out', 
         desc='moment about z axis')
 
     Ixx = Float(0.0,iotype='out', 
@@ -255,7 +256,6 @@ class Subsystem(Assembly):
         Ixx = 0
         Iyy = 0
         Izz = 0
-        
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:
             """roll up properties from subsystems """

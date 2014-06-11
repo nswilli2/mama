@@ -61,9 +61,6 @@ class Subsystem(Assembly):
     z = Float(0.0, iotype='in', units='m',
         desc='distance from center line of the center of gravity of the subsystem')
 
-    xstage = FLoat(0.0, iotype='in', units='m',
-        desc='stage distance from end of rocket')
-
     #Length, radius and shape are needed to calculate Ioxx, Ioyy, Iozz for components (See Columns W-AA of Excel sheet)
     #L = Float(0.0, iotype='in', units='m',
     #    desc='effective length of subsystem'))
@@ -127,10 +124,6 @@ class Subsystem(Assembly):
         if self.fixed_mass == 0:
             for name in self.equipment_list:
                 self.fixed_mass += self.equipment_list[name]
-
-        #Bring down xstage from stage
-        #from spacecraft.stage import xstage 
-        #self.xstage = xstage
 
         super(Subsystem, self).configure()
 
@@ -253,7 +246,7 @@ class Subsystem(Assembly):
                 el[subsystem] = self.get(subsystem).get_equipment_list()
         return el
 
-   def get_mass_properties(self):
+    def get_mass_properties(self):
         """ calculate mass properties """
         Cg = 0
         Mx = 0
@@ -266,13 +259,16 @@ class Subsystem(Assembly):
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:
             """roll up properties from subsystems """
+            xparent = self.x
             for subsystem in subsystems:
                 self.get(subsystem).get_mass_properties()
-                self.Mx += (subsystem.dry_mass*subsystem.x)
+                xorigin = subsystem.x + xparent
+                self.Mx += (subsystem.dry_mass*xorigin)
                 self.My += (subsystem.dry_mass*subsystem.y)
                 self.Mz += (subsystem.dry_mass*subsystem.z)
             moments = [self.Mx,self.My,self.Mz]
             self.Cg = [moment/self.dry_mass for moment in moments]
+            #Need to include (self.Cg[1] - Cgrocket[1]), etc...See Excel T-V
             self.Ixx = self.dry_mass*((self.Cg[1])**2 + (self.Cg[2])**2)
             self.Iyy = self.dry_mass*((self.Cg[0])**2 + (self.Cg[2])**2)
             self.Izz = self.dry_mass*((self.Cg[0])**2 + (self.Cg[1])**2)
@@ -288,13 +284,11 @@ class Subsystem(Assembly):
             self.Mx = self.x*self.dry_mass
             self.My = self.y*self.dry_mass
             self.Mz = self.z*self.dry_mass
+            #Need to include (self.y - Cgrocket[1]), etc...See Excel T-V
             self.Ixx = self.dry_mass*((self.y)**2 + (self.z)**2)
             self.Iyy = self.dry_mass*((self.x)**2 + (self.z)**2)
             self.Izz = self.dry_mass*((self.x)**2 + (self.y)**2)    
 
-        """transform mass properties with respect to this subsystems coordinates"""
-        #Transforming mass properties with respect to stage, using xstage
-        #May only want to do this as a part of the Stage class, not for every subsystem
         return (Cg, Mx, My, Mz, Ixx, Iyy, Izz)
 
     def log(self, *args):

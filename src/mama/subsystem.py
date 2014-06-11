@@ -54,13 +54,13 @@ class Subsystem(Assembly):
         desc='dictionary of equipment masses')
 
     x = Float(0.0, iotype='in', units='m',
-        desc='distance from end of stage of the center of gravity of the subsystem')
+        desc='distance along center axis')
 
     y = Float(0.0, iotype='in', units='m',
-        desc='distance from center line of the center of gravity of the subsystem')
+        desc='distance perpendicular to x')
 
     z = Float(0.0, iotype='in', units='m',
-        desc='distance from center line of the center of gravity of the subsystem')
+        desc='distance perpindicular to x and y')
 
     #Length, radius and shape are needed to calculate Ioxx, Ioyy, Iozz for components (See Columns W-AA of Excel sheet)
     #L = Float(0.0, iotype='in', units='m',
@@ -231,9 +231,9 @@ class Subsystem(Assembly):
 
     def add_equipment(self, name, mass, Cgwrtstage):
         self.equipment_list[name] = mass
-        self.equipment_list[name + '.x'] = Cgwrtstage[0]
-        self.equipment_list[name + '.y'] = Cgwrtstage[1]
-        self.equipment_list[name + '.z'] = Cgwrtstage[2]
+        self.equipment_list[name + '.Cgx'] = Cgwrtstage[0]
+        self.equipment_list[name + '.Cgy'] = Cgwrtstage[1]
+        self.equipment_list[name + '.Cgz'] = Cgwrtstage[2]
 
     def get_equipment_list(self):
         el = self.equipment_list
@@ -249,45 +249,61 @@ class Subsystem(Assembly):
 
     def get_mass_properties(self):
         """ calculate mass properties """
-        Cg = 0
-        Mx = 0
-        My = 0
-        Mz = 0
-        Ixx = 0
-        Iyy = 0
-        Izz = 0
+        self.Cg = 0
+        self.Mx = 0
+        self.My = 0
+        self.Mz = 0
+        self.Ixx = 0
+        self.Iyy = 0
+        self.Izz = 0
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:
             """roll up properties from subsystems """
-            xparent = self.x
+            #If a subsystem has one or more subsystems, it has refrence points pre-defined
+            xparent = self.x 
+            yparent = self.y 
+            zparent = self.z 
             for subsystem in subsystems:
                 self.get(subsystem).get_mass_properties()
-                xorigin = subsystem.x + xparent
+                xorigin = subsystem.Cg[0] + xparent
+                yorigin = subsystem.Cg[1] + yparent
+                zorigin = subsystem.Cg[2] + zparent
                 self.Mx += (subsystem.dry_mass*xorigin)
-                self.My += (subsystem.dry_mass*subsystem.y)
-                self.Mz += (subsystem.dry_mass*subsystem.z)
+                self.My += (subsystem.dry_mass*yorigin)
+                self.Mz += (subsystem.dry_mass*zorigin)
             moments = [self.Mx,self.My,self.Mz]
             self.Cg = [moment/self.dry_mass for moment in moments]
-            #Need to include (self.Cg[1] - Cgrocket[1]), etc...See Excel T-V
-            self.Ixx = self.dry_mass*((self.Cg[1])**2 + (self.Cg[2])**2)
-            self.Iyy = self.dry_mass*((self.Cg[0])**2 + (self.Cg[2])**2)
-            self.Izz = self.dry_mass*((self.Cg[0])**2 + (self.Cg[1])**2)
-        else:
-            #Ioxx, Ioyy, Iozz depends on shape, length, radius
-            #if shape == 'Solid_Cylinder':
-            #    #calculations
-            #elif shape == 'Hollow_Thin-Wall_Cylinder':
-            #    #calculations
-            #else:
-            #    #Other: need Cg calculated elsewhere
-            self.Cg = [self.x, self.y, self.z]
-            self.Mx = self.x*self.dry_mass
-            self.My = self.y*self.dry_mass
-            self.Mz = self.z*self.dry_mass
-            #Need to include (self.y - Cgrocket[1]), etc...See Excel T-V
-            self.Ixx = self.dry_mass*((self.y)**2 + (self.z)**2)
-            self.Iyy = self.dry_mass*((self.x)**2 + (self.z)**2)
-            self.Izz = self.dry_mass*((self.x)**2 + (self.y)**2)    
+        else: 
+            #If a Subsystem has no subsystems, to determine Cg,
+            #it must have an equipment list, or a x,y,z input
+            if len(self.equipment_list) > 0: #If subsystem has an equipment list
+                el = self.equipment_list     #Then Cg can be rolled up from el  
+                for name in el:                           
+                    Cgx = el[name + '.Cgx']
+                    Cgy = el[name + '.Cgy']
+                    Cgz = el[name + '.Cgz']
+                    self.Mx += (el[name]*Cgx)
+                    self.My += (el[name]*Cgy)
+                    self.Mz += (el[name]*Cgz)    
+                moments = [self.Mx, self.My, self.Mz]
+                self.Cg = [moment/self.dry_mass for moment in moments]
+            else #Cg is [x, y, z]
+                self.Cg = [self.x, self.y, self.z]
+                self.Mx = self.x*self.dry_mass
+                self.My = self.y*self.dry_mass
+                self.Mz = self.z*self.dry_mass
+        #Need to include (self.Cg[1] - Cgrocket[1]), etc...See Excel T-V
+        self.Ixx = self.dry_mass*((self.Cg[1])**2 + (self.Cg[2])**2)
+        self.Iyy = self.dry_mass*((self.Cg[0])**2 + (self.Cg[2])**2)
+        self.Izz = self.dry_mass*((self.Cg[0])**2 + (self.Cg[1])**2)    
+
+        #Ioxx, Ioyy, Iozz depends on shape, length, radius
+        #if shape == 'Solid_Cylinder':
+        #    #calculations
+        #elif shape == 'Hollow_Thin-Wall_Cylinder':
+        #    #calculations
+        #else:
+        #    #Other: need Cg calculated elsewhere
 
         return (Cg, Mx, My, Mz, Ixx, Iyy, Izz)
 

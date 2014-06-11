@@ -89,7 +89,7 @@ class Subsystem(Assembly):
     Cg = List([0.0, 0.0, 0.0], iotype='out', 
         desc='center of gravity (x,y,z) of subsystem')
 
-    Mx = FLoat(0.0,iotype='out', 
+    Mx = Float(0.0,iotype='out', 
         desc='moment about x axis')
 
     My = Float(0.0,iotype='out', 

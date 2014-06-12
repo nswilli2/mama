@@ -62,16 +62,6 @@ class Subsystem(Assembly):
     z = Float(0.0, iotype='in', units='m',
         desc='distance perpindicular to x and y')
 
-    #Length, radius and shape are needed to calculate Ioxx, Ioyy, Iozz for components (See Columns W-AA of Excel sheet)
-    #L = Float(0.0, iotype='in', units='m',
-    #    desc='effective length of subsystem'))
-
-    #r = Float(0.0, iotype='in', units='m',
-    #    desc='effective radius of subsystem')
-
-    #shape = Enum('Solid_Cylinder', ('Solid_Cylinder','Hollow_Thin-Wall_Cylinder', 'Other'),
-    #    iotype='in', desc='Shape of subsystem'
-
     # outputs
 
     dry_mass = Float(0., iotype='out', units='kg',
@@ -99,13 +89,22 @@ class Subsystem(Assembly):
         desc='moment about z axis')
 
     Ixx = Float(0.0,iotype='out', 
-        desc='moment of inertia around x axis')
+        desc='moment of inertia around x axis wrt Vehicle')
 
     Iyy = Float(0.0,iotype='out',
-        desc='moment of inertia around y axis')
+        desc='moment of inertia around y axis wrt Vehicle')
 
     Izz = Float(0.0,iotype='out', 
-        desc='moment of inertia around z axis')
+        desc='moment of inertia around z axis wrt Vehicle')
+
+    Ioxx = Float(0.0,iotype='out', 
+        desc='moment of inertia around x axis wrt subsystem Cg')
+
+    Ioyy = Float(0.0,iotype='out',
+        desc='moment of inertia around y axis wrt subsystem Cg')
+
+    Iozz = Float(0.0,iotype='out', 
+        desc='moment of inertia around z axis wrt subsystem Cg')
 
     # methods
 
@@ -124,7 +123,7 @@ class Subsystem(Assembly):
         # if fixed mass is not specified, roll it up from equipment list
         if self.fixed_mass == 0:
             for name in self.equipment_list:
-                self.fixed_mass += self.equipment_list[name]
+                self.fixed_mass += self.equipment_list[name['mass']]
 
         super(Subsystem, self).configure()
 
@@ -229,11 +228,8 @@ class Subsystem(Assembly):
 
         #Need changes to include mass porperties
 
-    def add_equipment(self, name, mass, Cgwrtstage):
-        self.equipment_list[name] = mass
-        self.equipment_list[name + '.Cgx'] = Cgwrtstage[0]
-        self.equipment_list[name + '.Cgy'] = Cgwrtstage[1]
-        self.equipment_list[name + '.Cgz'] = Cgwrtstage[2]
+    def add_equipment(self, name, properties):
+        self.equipment_list[name] = properties
 
     def get_equipment_list(self):
         el = self.equipment_list
@@ -256,6 +252,9 @@ class Subsystem(Assembly):
         self.Ixx = 0
         self.Iyy = 0
         self.Izz = 0
+        self.Ioxx = 0
+        self.Ioyy = 0
+        self.Iozz = 0
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:
             """roll up properties from subsystems """
@@ -279,12 +278,12 @@ class Subsystem(Assembly):
             if len(self.equipment_list) > 0: #If subsystem has an equipment list
                 el = self.equipment_list     #Then Cg can be rolled up from el  
                 for name in el:                           
-                    Cgx = el[name + '.Cgx']
-                    Cgy = el[name + '.Cgy']
-                    Cgz = el[name + '.Cgz']
-                    self.Mx += (el[name]*Cgx)
-                    self.My += (el[name]*Cgy)
-                    self.Mz += (el[name]*Cgz)    
+                    Cgx = el[name['Cgx']]
+                    Cgy = el[name['Cgy']]
+                    Cgz = el[name['Cgz']]
+                    self.Mx += (el[name['mass']]*Cgx)
+                    self.My += (el[name['mass']]*Cgy)
+                    self.Mz += (el[name['mass']]*Cgz)    
                 moments = [self.Mx, self.My, self.Mz]
                 self.Cg = [moment/self.dry_mass for moment in moments]
             else #Cg is [x, y, z]
@@ -292,20 +291,25 @@ class Subsystem(Assembly):
                 self.Mx = self.x*self.dry_mass
                 self.My = self.y*self.dry_mass
                 self.Mz = self.z*self.dry_mass
+
         #Need to include (self.Cg[1] - Cgrocket[1]), etc...See Excel T-V
         self.Ixx = self.dry_mass*((self.Cg[1])**2 + (self.Cg[2])**2)
         self.Iyy = self.dry_mass*((self.Cg[0])**2 + (self.Cg[2])**2)
         self.Izz = self.dry_mass*((self.Cg[0])**2 + (self.Cg[1])**2)    
 
         #Ioxx, Ioyy, Iozz depends on shape, length, radius
-        #if shape == 'Solid_Cylinder':
-        #    #calculations
-        #elif shape == 'Hollow_Thin-Wall_Cylinder':
-        #    #calculations
-        #else:
-        #    #Other: need Cg calculated elsewhere
+        for name in self.equipment_list:
+            if name['shape'] == 'Solid_Cylinder':
+                Ioyy = (name['mass']/12)*((3*name['radius'])**2 + (name['length']**2))
+                Iozz = Ioyy
+                Ioxx = name['mass']*(name['radius'])**2
+            elif name['shape'] == 'Hollow_Thin-Wall_Cylinder':
+                Ioyy = (name['mass']/12)*((6*name['radius'])**2 + (name['length']**2))
+                Iozz = Ioyy
+                Ioxx = name['mass']*(name['radius'])**2
 
-        return (Cg, Mx, My, Mz, Ixx, Iyy, Izz)
+
+        return (Cg, Mx, My, Mz, Ixx, Iyy, Izz, Ioxx, Ioyy, Iozz)
 
     def log(self, *args):
         logger = logging.getLogger('mission')

@@ -123,7 +123,7 @@ class Subsystem(Assembly):
         # if fixed mass is not specified, roll it up from equipment list
         if self.fixed_mass == 0:
             for name in self.equipment_list:
-                self.fixed_mass += self.equipment_list[name['mass']]
+                self.fixed_mass += self.equipment_list[name['fixed_mass']]
 
         super(Subsystem, self).configure()
 
@@ -280,10 +280,14 @@ class Subsystem(Assembly):
                     self.Ioyy += (dm/12)*((3*r)**2 + (L*2))
                     self.Iozz += self.Ioyy
                     self.Ioxx += dm*(r)**2
-                elif el[name['shape']] == 'Hollow_Thin-Wall_Cylinder':
+                elif el[name['shape']] == 'Hollow_Cylinder':
                     self.Ioyy += (dm/12)*((6*r)**2 + (L*2))
                     self.Iozz += self.Ioyy
                     self.Ioxx += dm*(r)**2
+                else #Ioxx, Ioyy and Iozz need to be input
+                    self.Ioxx += el[name['Ioxx']]
+                    self.Ioyy += el[name['Ioyy']]
+                    self.Iozz += el[name['Iozz']]
             moments = [self.Mx, self.My, self.Mz]
             self.Cg = [moment/self.dry_mass for moment in moments]
 

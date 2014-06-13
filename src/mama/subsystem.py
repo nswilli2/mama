@@ -51,16 +51,16 @@ class Subsystem(Assembly):
         desc='mass maturity (per MGA table)')
 
     equipment_list = Dict(iotype='in',
-        desc='dictionary of equipment masses')
+        desc='dictionary of equipment properties')
 
-    x = Float(0.0, iotype='in', units='m',
-        desc='distance along center axis')
+    xbase = Float(0.0, iotype='in', units='m',
+        desc='base reference of distance along center axis')
 
-    y = Float(0.0, iotype='in', units='m',
-        desc='distance perpendicular to x')
+    ybase = Float(0.0, iotype='in', units='m',
+        desc='base reference of distance perpendicular to x')
 
-    z = Float(0.0, iotype='in', units='m',
-        desc='distance perpindicular to x and y')
+    zbase = Float(0.0, iotype='in', units='m',
+        desc='base reference of distance perpindicular to x and y')
 
     # outputs
 
@@ -249,67 +249,75 @@ class Subsystem(Assembly):
         self.Mx = 0
         self.My = 0
         self.Mz = 0
-        self.Ixx = 0
-        self.Iyy = 0
-        self.Izz = 0
         self.Ioxx = 0
         self.Ioyy = 0
         self.Iozz = 0
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:
             """roll up properties from subsystems """
-            #If a subsystem has one or more subsystems, it has refrence points pre-defined
-            xparent = self.x 
-            yparent = self.y 
-            zparent = self.z 
             for subsystem in subsystems:
                 self.get(subsystem).get_mass_properties()
-                xorigin = subsystem.Cg[0] + xparent
-                yorigin = subsystem.Cg[1] + yparent
-                zorigin = subsystem.Cg[2] + zparent
-                self.Mx += (subsystem.dry_mass*xorigin)
-                self.My += (subsystem.dry_mass*yorigin)
-                self.Mz += (subsystem.dry_mass*zorigin)
-            moments = [self.Mx,self.My,self.Mz]
+                self.Mx += subsystem.dry_mass*(subsystem.Cg[0] + self.xbase)
+                self.My += subsystem.dry_mass*(subsystem.Cg[1] + self.ybase)
+                self.Mz += subsystem.dry_mass*(subsystem.Cg[2] + self.zbase)
+                self.Ioxx += subsystem.Ioxx
+                self.Ioyy += subsystem.Ioyy
+                self.Iozz += subsystem.Iozz
+            moments = [self.Mx, self.My, self.Mz]
             self.Cg = [moment/self.dry_mass for moment in moments]
         else: 
-            #If a Subsystem has no subsystems, to determine Cg,
-            #it must have an equipment list, or a x,y,z input
-            if len(self.equipment_list) > 0: #If subsystem has an equipment list
-                el = self.equipment_list     #Then Cg can be rolled up from el  
-                for name in el:                           
-                    Cgx = el[name['Cgx']]
-                    Cgy = el[name['Cgy']]
-                    Cgz = el[name['Cgz']]
-                    self.Mx += (el[name['mass']]*Cgx)
-                    self.My += (el[name['mass']]*Cgy)
-                    self.Mz += (el[name['mass']]*Cgz)    
-                moments = [self.Mx, self.My, self.Mz]
-                self.Cg = [moment/self.dry_mass for moment in moments]
-            else #Cg is [x, y, z]
-                self.Cg = [self.x, self.y, self.z]
-                self.Mx = self.x*self.dry_mass
-                self.My = self.y*self.dry_mass
-                self.Mz = self.z*self.dry_mass
+            """If no subsystems, roll up from equipment list"""
+            #TODO: Use el[name['mass']] or name.dry_mass?
+            el = self.equipment_list     
+            for name in el:                           
+                r = el[name['radius']]
+                L = el[name['length']]
+                dm = name.dry_mass 
+                self.Mx += dm*el[name['x']]
+                self.My += dm*el[name['y']]
+                self.Mz += dm*el[name['z']] 
+                if el[name['shape']] == 'Solid_Cylinder':
+                    self.Ioyy += (dm/12)*((3*r)**2 + (L*2))
+                    self.Iozz += self.Ioyy
+                    self.Ioxx += dm*(r)**2
+                elif el[name['shape']] == 'Hollow_Thin-Wall_Cylinder':
+                    self.Ioyy += (dm/12)*((6*r)**2 + (L*2))
+                    self.Iozz += self.Ioyy
+                    self.Ioxx += dm*(r)**2
+            moments = [self.Mx, self.My, self.Mz]
+            self.Cg = [moment/self.dry_mass for moment in moments]
 
-        #Need to include (self.Cg[1] - Cgrocket[1]), etc...See Excel T-V
-        self.Ixx = self.dry_mass*((self.Cg[1])**2 + (self.Cg[2])**2)
-        self.Iyy = self.dry_mass*((self.Cg[0])**2 + (self.Cg[2])**2)
-        self.Izz = self.dry_mass*((self.Cg[0])**2 + (self.Cg[1])**2)    
+    Cgrocket = List([0.0, 0.0, 0.0], iotype='in',
+        desc='center of gravity for entire system')
 
-        #Ioxx, Ioyy, Iozz depends on shape, length, radius
-        for name in self.equipment_list:
-            if name['shape'] == 'Solid_Cylinder':
-                Ioyy = (name['mass']/12)*((3*name['radius'])**2 + (name['length']**2))
-                Iozz = Ioyy
-                Ioxx = name['mass']*(name['radius'])**2
-            elif name['shape'] == 'Hollow_Thin-Wall_Cylinder':
-                Ioyy = (name['mass']/12)*((6*name['radius'])**2 + (name['length']**2))
-                Iozz = Ioyy
-                Ioxx = name['mass']*(name['radius'])**2
-
-
-        return (Cg, Mx, My, Mz, Ixx, Iyy, Izz, Ioxx, Ioyy, Iozz)
+    def get_inertia(self):
+        """ calculate moments of inertia
+            get_mass_properties must be executed first in order to determine Cgrocket
+        """
+        self.Ixx = 0
+        self.Iyy = 0
+        self.Izz = 0
+        subsystems = self.get_children(Subsystem)
+        if len(subsystems) > 0:
+            """roll up properties from subsystems """
+            for subsystem in subsystems:
+                self.get(subsystem).get_inertia()
+                x = subsystem.Cg[0] + self.xbase
+                y = subsystem.Cg[1] + self.ybase
+                z = subsystem.Cg[2] + self.zbase
+                self.Ixx += subsystem.dry_mass*((y - Cgrocket[1])**2 + (z - Cgrocket[2])**2)
+                self.Iyy += subsystem.dry_mass*((x - Cgrocket[0])**2 + (z - Cgrocket[2])**2)
+                self.Izz += subsystem.dry_mass*((x - Cgrocket[0])**2 + (y - Cgrocket[1])**2)
+        else
+            """If no subsystems, roll up from equipment list"""
+            el = self.equipment_list     
+            for name in el:                           
+                x = el[name['x']]
+                y = el[name['y']]
+                z = el[name['z']]
+                self.Ixx += subsystem.dry_mass*((y - Cgrocket[1])**2 + (z - Cgrocket[2])**2)
+                self.Iyy += subsystem.dry_mass*((x - Cgrocket[0])**2 + (z - Cgrocket[2])**2)
+                self.Izz += subsystem.dry_mass*((x - Cgrocket[0])**2 + (y - Cgrocket[1])**2)
 
     def log(self, *args):
         logger = logging.getLogger('mission')

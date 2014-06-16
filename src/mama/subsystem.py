@@ -264,7 +264,7 @@ class Subsystem(Assembly):
                 self.Ioyy += subsystem.Ioyy
                 self.Iozz += subsystem.Iozz
         el = self.equipment_list 
-        if len(el) > 0
+        if len(el) > 0:
             """roll up properties from equipment_list""" 
             for name in el:                          
                 dm = name.dry_mass 
@@ -311,9 +311,9 @@ class Subsystem(Assembly):
                 self.Ixx += subsystem.dry_mass*((y - Cgrocket[1])**2 + (z - Cgrocket[2])**2)
                 self.Iyy += subsystem.dry_mass*((x - Cgrocket[0])**2 + (z - Cgrocket[2])**2)
                 self.Izz += subsystem.dry_mass*((x - Cgrocket[0])**2 + (y - Cgrocket[1])**2)
-        else
-            """If no subsystems, roll up from equipment list"""
-            el = self.equipment_list     
+        el = self.equipment_list 
+        if len(el) > 0:
+            """roll up properties from equipment_list"""     
             for name in el:                           
                 x = el[name]['x']
                 y = el[name]['y']

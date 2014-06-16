@@ -123,7 +123,7 @@ class Subsystem(Assembly):
         # if fixed mass is not specified, roll it up from equipment list
         if self.fixed_mass == 0:
             for name in self.equipment_list:
-                self.fixed_mass += self.equipment_list[name['fixed_mass']]
+                self.fixed_mass += self.equipment_list[name]['fixed_mass']
 
         super(Subsystem, self).configure()
 
@@ -271,25 +271,25 @@ class Subsystem(Assembly):
             el = self.equipment_list     
             for name in el:                           
                 dm = name.dry_mass 
-                self.Mx += dm*el[name['x']]
-                self.My += dm*el[name['y']]
-                self.Mz += dm*el[name['z']] 
-                if el[name['shape']] == 'Solid_Cylinder':
-                    r = el[name['radius']]
-                    L = el[name['length']]
+                self.Mx += dm*el[name]['x']
+                self.My += dm*el[name]['y']
+                self.Mz += dm*el[name]['z'] 
+                if el[name]['shape'] == 'Solid_Cylinder':
+                    r = el[name]['radius']
+                    L = el[name]['length']
                     self.Ioyy += (dm/12)*((3*r)**2 + (L*2))
                     self.Iozz += self.Ioyy
                     self.Ioxx += dm*(r)**2
-                elif el[name['shape']] == 'Hollow_Cylinder':
-                    r = el[name['radius']]
-                    L = el[name['length']]
+                elif el[name]['shape'] == 'Hollow_Cylinder':
+                    r = el[name]['radius']
+                    L = el[name]['length']
                     self.Ioyy += (dm/12)*((6*r)**2 + (L*2))
                     self.Iozz += self.Ioyy
                     self.Ioxx += dm*(r)**2
                 else #Ioxx, Ioyy and Iozz need to be input
-                    self.Ioxx += el[name['Ioxx']]
-                    self.Ioyy += el[name['Ioyy']]
-                    self.Iozz += el[name['Iozz']]
+                    self.Ioxx += el[name]['Ioxx']
+                    self.Ioyy += el[name]['Ioyy']
+                    self.Iozz += el[name]['Iozz']
             moments = [self.Mx, self.My, self.Mz]
             self.Cg = [moment/self.dry_mass for moment in moments]
 
@@ -318,9 +318,9 @@ class Subsystem(Assembly):
             """If no subsystems, roll up from equipment list"""
             el = self.equipment_list     
             for name in el:                           
-                x = el[name['x']]
-                y = el[name['y']]
-                z = el[name['z']]
+                x = el[name]['x']
+                y = el[name]['y']
+                z = el[name]['z']
                 self.Ixx += subsystem.dry_mass*((y - Cgrocket[1])**2 + (z - Cgrocket[2])**2)
                 self.Iyy += subsystem.dry_mass*((x - Cgrocket[0])**2 + (z - Cgrocket[2])**2)
                 self.Izz += subsystem.dry_mass*((x - Cgrocket[0])**2 + (y - Cgrocket[1])**2)

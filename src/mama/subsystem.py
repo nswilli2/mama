@@ -8,8 +8,8 @@ import logging
 
 from zope.interface import Interface
 
-from openmdao.main.api import Assembly
-from openmdao.lib.datatypes.api import Str, Float, Dict, List
+from openmdao.main.api import Assembly, Component
+from openmdao.lib.datatypes.api import Str, Float, Dict, List, Enum
 from openmdao.main.mp_support import has_interface
 
 import mga
@@ -122,8 +122,8 @@ class Subsystem(Assembly):
 
         # if fixed mass is not specified, roll it up from equipment list
         if self.fixed_mass == 0:
-            for name in self.equipment_list:
-                self.fixed_mass += self.equipment_list[name]['fixed_mass']
+            for Equipment() in Subsystem:
+                self.fixed_mass += Equipment().fixed_mass
 
         super(Subsystem, self).configure()
 
@@ -228,21 +228,6 @@ class Subsystem(Assembly):
 
         #Need changes to include mass porperties
 
-    def add_equipment(self, name, properties):
-        self.equipment_list[name] = properties
-
-    def get_equipment_list(self):
-        el = self.equipment_list
-        if len(el) == 0:
-            if self.fixed_mass > 0:
-                el['fixed_mass'] = self.fixed_mass
-
-        subsystems = self.get_children(Subsystem)
-        if len(subsystems) > 0:
-            for subsystem in subsystems:
-                el[subsystem] = self.get(subsystem).get_equipment_list()
-        return el
-
     def get_mass_properties(self):
         """ calculate mass properties """
         self.Cg = 0
@@ -263,30 +248,25 @@ class Subsystem(Assembly):
                 self.Ioxx += subsystem.Ioxx
                 self.Ioyy += subsystem.Ioyy
                 self.Iozz += subsystem.Iozz
-        el = self.equipment_list 
-        if len(el) > 0:
-            """roll up properties from equipment_list""" 
-            for name in el:                          
-                dm = name.dry_mass 
-                self.Mx += dm*el[name]['x']
-                self.My += dm*el[name]['y']
-                self.Mz += dm*el[name]['z'] 
-                if el[name]['shape'] == 'Solid_Cylinder':
-                    r = el[name]['radius']
-                    L = el[name]['length']
-                    self.Ioyy += (dm/12)*((3*r)**2 + (L*2))
-                    self.Iozz += self.Ioyy
-                    self.Ioxx += dm*(r)**2
-                elif el[name]['shape'] == 'Hollow_Cylinder':
-                    r = el[name]['radius']
-                    L = el[name]['length']
-                    self.Ioyy += (dm/12)*((6*r)**2 + (L*2))
-                    self.Iozz += self.Ioyy
-                    self.Ioxx += dm*(r)**2
-                else #Ioxx, Ioyy and Iozz need to be input
-                    self.Ioxx += el[name]['Ioxx']
-                    self.Ioyy += el[name]['Ioyy']
-                    self.Iozz += el[name]['Iozz']
+        """roll up properties from equipment""" 
+        Eq = Equipment()
+        for Eq in SubSystem:
+            m = Eq.fixed_mass                         
+            self.Mx += m*(Eq.x + self.xbase)
+            self.My += m*(Eq.y + self.ybase)
+            self.Mz += m*(Eq.z + self.zbase)
+            if Eq.shape == 'Solid_Cylinder':
+                self.Ioyy = (m/12)*((3*Eq.r)**2 + (Eq.L*2))
+                self.Iozz = self.Ioyy
+                self.Ioxx = m*(Eq.r)**2
+            elif Eq.shape == 'Hollow_Cylinder':
+                self.Ioyy = (m/12)*((6*Eq.r)**2 + (Eq.L*2))
+                self.Iozz = self.Ioyy
+                self.Ioxx = m*(Eq.r)**2
+            else:
+                self.Ioxx = Eq.Ioxx 
+                self.Ioyy = Eq.Ioyy
+                self.Iozz = Eq.Iozz
         moments = [self.Mx, self.My, self.Mz]
         self.Cg = [moment/self.dry_mass for moment in moments]
 
@@ -311,16 +291,15 @@ class Subsystem(Assembly):
                 self.Ixx += subsystem.dry_mass*((y - Cgrocket[1])**2 + (z - Cgrocket[2])**2)
                 self.Iyy += subsystem.dry_mass*((x - Cgrocket[0])**2 + (z - Cgrocket[2])**2)
                 self.Izz += subsystem.dry_mass*((x - Cgrocket[0])**2 + (y - Cgrocket[1])**2)
-        el = self.equipment_list 
-        if len(el) > 0:
-            """roll up properties from equipment_list"""     
-            for name in el:                           
-                x = el[name]['x']
-                y = el[name]['y']
-                z = el[name]['z']
-                self.Ixx += subsystem.dry_mass*((y - Cgrocket[1])**2 + (z - Cgrocket[2])**2)
-                self.Iyy += subsystem.dry_mass*((x - Cgrocket[0])**2 + (z - Cgrocket[2])**2)
-                self.Izz += subsystem.dry_mass*((x - Cgrocket[0])**2 + (y - Cgrocket[1])**2)
+        """roll up properties from equipment""" 
+        Eq = Equipment()
+        for Eq in SubSystem:
+            x = Eq.Cg[0] + self.xbase
+            y = Eq.Cg[1] + self.ybase
+            z = Eq.Cg[2] + self.zbase                          
+            self.Ixx += Eq.fixed_mass*((y - Cgrocket[1])**2 + (z - Cgrocket[2])**2)
+            self.Iyy += Eq.fixed_mass*((x - Cgrocket[0])**2 + (z - Cgrocket[2])**2)
+            self.Izz += Eq.fixed_mass*((x - Cgrocket[0])**2 + (y - Cgrocket[1])**2)
 
     def log(self, *args):
         logger = logging.getLogger('mission')
@@ -328,5 +307,40 @@ class Subsystem(Assembly):
         for arg in args:
             msg += str(arg) + ' '
         logger.info(msg.rstrip(' '))
+
+    class Equipment(Component):
+        """
+            equipment belongs to a subsystem
+        """
+    
+        fixed_mass = Float(0.0, iotype='in', units='kg',
+            desc='fixed hardware mass ("overhead") of subsystem')
+    
+        x = Float(0.0, iotype='in', units='m',
+            desc='distance from parent along center axis')
+    
+        y = Float(0.0, iotype='in', units='m',
+            desc='distance from parent perpindicular to x')
+    
+        z = Float(0.0, iotype='in', units='m',
+            desc='distance from parent perpindicular to x and y')
+    
+        r = Float(0.00, iotypw='in', units='m',
+            desc='effective radius of component')
+    
+        L = Float(0.00, iotype='in', units='m',
+            desc='effective length of component')
+    
+        shape = Enum('Solid_Cylinder', ('Solid_Cylinder', 'Hollow_Cylinder', 'Other'), iotype='in',
+            desc='approximate shape of component')
+
+        Ioxx = Float(0.0,iotype='in', 
+            desc='moment of inertia around x axis wrt subsystem Cg')
+
+        Ioyy = Float(0.0,iotype='in',
+            desc='moment of inertia around y axis wrt subsystem Cg')
+    
+        Iozz = Float(0.0,iotype='in', 
+            desc='moment of inertia around z axis wrt subsystem Cg')
 
 # end SubSystem

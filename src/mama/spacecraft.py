@@ -211,6 +211,15 @@ class Spacecraft(Subsystem):
     crew_consumable_rate = Float(0.0, iotype='in',
         desc='crew consumable rate in mt/person/day')
 
+    IxxTot = Float(0.0, iotype='out',
+        desc='Total moment of inertia around x axis')
+
+    IyyTot = Float(0.0, iotype='out',
+        desc='Total moment of inertia around y axis')
+
+    IzzTot = Float(0.0, iotype='out',
+        desc='Total moment of inertia around z axis')
+
     def execute(self):
         """ instrumented execute function
         """
@@ -243,6 +252,14 @@ class Spacecraft(Subsystem):
         #         print ' ', stage.name, ss.name, 'total boil_off =', ss.total_boiloff
         #         total_boiloff += ss.total_boiloff
         # print '  total boil_off =', total_boiloff
+
+    def get_total_inertia(self):
+        self.get_mass_properties
+        self.Cgrocket = self.Cg
+        self.get_inertia
+        self.IxxTot = self.Ixx + self.Ioxx
+        self.IyyTot = self.Iyy + self.Ioyy
+        self.IzzTot = self.Izz + self.Iozz
 
     def add_stage(self, name, stage):
         """ add a stage to the spacecraft

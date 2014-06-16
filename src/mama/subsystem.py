@@ -2,13 +2,14 @@
    subsystem.py
 """
 
+
 import sys
 import logging
 
 from zope.interface import Interface
 
 from openmdao.main.api import Assembly
-from openmdao.lib.datatypes.api import Str, Float, Dict
+from openmdao.lib.datatypes.api import Str, Float, Dict, List
 from openmdao.main.mp_support import has_interface
 
 import mga
@@ -31,6 +32,8 @@ class Subsystem(Assembly):
 
         This class is intended to be extended to reflect the characteristics
         of specific subsystems.
+
+        Mass properties (center of gravity and moments of inertia) are in the process of being added
     """
 
     # inputs
@@ -48,27 +51,65 @@ class Subsystem(Assembly):
         desc='mass maturity (per MGA table)')
 
     equipment_list = Dict(iotype='in',
-        desc='dictionary of equipment masses')
+        desc='dictionary of equipment properties')
+
+    xbase = Float(0.0, iotype='in', units='m',
+        desc='base reference of distance along center axis')
+
+    ybase = Float(0.0, iotype='in', units='m',
+        desc='base reference of distance perpendicular to x')
+
+    zbase = Float(0.0, iotype='in', units='m',
+        desc='base reference of distance perpindicular to x and y')
 
     # outputs
 
     dry_mass = Float(0., iotype='out', units='kg',
-         desc='calculated dry mass of subsystem in kg')
+        desc='calculated dry mass of subsystem in kg')
 
     dwc = Float(0.0, iotype='out',
         desc='dry weight contingency (based on mass category and maturity)')
 
     wet_mass = Float(0., iotype='out', units='kg',
-         desc='calculated wet mass of subsystem in kg')
+        desc='calculated wet mass of subsystem in kg')
 
     power_usage = Float(0., iotype='out', units='kW',
-         desc='calculated electrical power used by subsystem')
+        desc='calculated electrical power used by subsystem')
+
+    Cg = List([0.0, 0.0, 0.0], iotype='out', 
+        desc='center of gravity (x,y,z) of subsystem')
+
+    Mx = Float(0.0,iotype='out', 
+        desc='moment about x axis')
+
+    My = Float(0.0,iotype='out', 
+        desc='moment about y axis')
+
+    Mz = Float(0.0,iotype='out', 
+        desc='moment about z axis')
+
+    Ixx = Float(0.0,iotype='out', 
+        desc='moment of inertia around x axis wrt Vehicle')
+
+    Iyy = Float(0.0,iotype='out',
+        desc='moment of inertia around y axis wrt Vehicle')
+
+    Izz = Float(0.0,iotype='out', 
+        desc='moment of inertia around z axis wrt Vehicle')
+
+    Ioxx = Float(0.0,iotype='out', 
+        desc='moment of inertia around x axis wrt subsystem Cg')
+
+    Ioyy = Float(0.0,iotype='out',
+        desc='moment of inertia around y axis wrt subsystem Cg')
+
+    Iozz = Float(0.0,iotype='out', 
+        desc='moment of inertia around z axis wrt subsystem Cg')
 
     # methods
 
     def configure(self):
-        """ if subsystem has child subsystems, add a Summation component.
-        """
+        """ if subsystem has child subsystems, add a Summation component."""
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:
             self.add_to_workflow(subsystems)
@@ -82,7 +123,7 @@ class Subsystem(Assembly):
         # if fixed mass is not specified, roll it up from equipment list
         if self.fixed_mass == 0:
             for name in self.equipment_list:
-                self.fixed_mass += self.equipment_list[name]
+                self.fixed_mass += self.equipment_list[name]['fixed_mass']
 
         super(Subsystem, self).configure()
 
@@ -96,9 +137,11 @@ class Subsystem(Assembly):
         self.dwc = mga.get_MGA(self.mass_category, self.mass_maturity)
         self.update_dry_mass()
         self.update_wet_mass()
+        self.get_mass_properties()
+
         # print '%10s %10s Dry Mass: %5.2f (%2d%% MGA), Wet Mass: %5.2f' \
         #     % (self.parent.name, self.name, self.dry_mass, self.dwc*100, self.wet_mass)
-
+  
     def update_dry_mass(self):
         """ Update the dry mass of the subsystem.
             The default dry mass calculation is to multiply the fixed mass
@@ -154,8 +197,7 @@ class Subsystem(Assembly):
         return total
 
     def display(self, indent=0, output=sys.stdout, show_equipment=False):
-        """ display details about the subsystem
-        """
+        """ display details about the subsystem"""
         wetness = self.wet_mass - self.dry_mass
         if wetness == 0:
             if (mga.MGA_enabled):
@@ -184,8 +226,10 @@ class Subsystem(Assembly):
             for subsystem in subsystems:
                 self.get(subsystem).display(indent+1, output, show_equipment)
 
-    def add_equipment(self, name, mass):
-        self.equipment_list[name] = mass
+        #Need changes to include mass porperties
+
+    def add_equipment(self, name, properties):
+        self.equipment_list[name] = properties
 
     def get_equipment_list(self):
         el = self.equipment_list
@@ -198,6 +242,85 @@ class Subsystem(Assembly):
             for subsystem in subsystems:
                 el[subsystem] = self.get(subsystem).get_equipment_list()
         return el
+
+    def get_mass_properties(self):
+        """ calculate mass properties """
+        self.Cg = 0
+        self.Mx = 0
+        self.My = 0
+        self.Mz = 0
+        self.Ioxx = 0
+        self.Ioyy = 0
+        self.Iozz = 0
+        subsystems = self.get_children(Subsystem)
+        if len(subsystems) > 0:
+            """roll up properties from subsystems """
+            for subsystem in subsystems:
+                self.get(subsystem).get_mass_properties()
+                self.Mx += subsystem.dry_mass*(subsystem.Cg[0] + self.xbase)
+                self.My += subsystem.dry_mass*(subsystem.Cg[1] + self.ybase)
+                self.Mz += subsystem.dry_mass*(subsystem.Cg[2] + self.zbase)
+                self.Ioxx += subsystem.Ioxx
+                self.Ioyy += subsystem.Ioyy
+                self.Iozz += subsystem.Iozz
+        el = self.equipment_list 
+        if len(el) > 0:
+            """roll up properties from equipment_list""" 
+            for name in el:                          
+                dm = name.dry_mass 
+                self.Mx += dm*el[name]['x']
+                self.My += dm*el[name]['y']
+                self.Mz += dm*el[name]['z'] 
+                if el[name]['shape'] == 'Solid_Cylinder':
+                    r = el[name]['radius']
+                    L = el[name]['length']
+                    self.Ioyy += (dm/12)*((3*r)**2 + (L*2))
+                    self.Iozz += self.Ioyy
+                    self.Ioxx += dm*(r)**2
+                elif el[name]['shape'] == 'Hollow_Cylinder':
+                    r = el[name]['radius']
+                    L = el[name]['length']
+                    self.Ioyy += (dm/12)*((6*r)**2 + (L*2))
+                    self.Iozz += self.Ioyy
+                    self.Ioxx += dm*(r)**2
+                else #Ioxx, Ioyy and Iozz need to be input
+                    self.Ioxx += el[name]['Ioxx']
+                    self.Ioyy += el[name]['Ioyy']
+                    self.Iozz += el[name]['Iozz']
+        moments = [self.Mx, self.My, self.Mz]
+        self.Cg = [moment/self.dry_mass for moment in moments]
+
+    Cgrocket = List([0.0, 0.0, 0.0], iotype='in',
+        desc='center of gravity for entire system')
+
+    def get_inertia(self):
+        """ calculate moments of inertia
+            get_mass_properties must be executed first in order to determine Cgrocket
+        """
+        self.Ixx = 0
+        self.Iyy = 0
+        self.Izz = 0
+        subsystems = self.get_children(Subsystem)
+        if len(subsystems) > 0:
+            """roll up properties from subsystems """
+            for subsystem in subsystems:
+                self.get(subsystem).get_inertia()
+                x = subsystem.Cg[0] + self.xbase
+                y = subsystem.Cg[1] + self.ybase
+                z = subsystem.Cg[2] + self.zbase
+                self.Ixx += subsystem.dry_mass*((y - Cgrocket[1])**2 + (z - Cgrocket[2])**2)
+                self.Iyy += subsystem.dry_mass*((x - Cgrocket[0])**2 + (z - Cgrocket[2])**2)
+                self.Izz += subsystem.dry_mass*((x - Cgrocket[0])**2 + (y - Cgrocket[1])**2)
+        el = self.equipment_list 
+        if len(el) > 0:
+            """roll up properties from equipment_list"""     
+            for name in el:                           
+                x = el[name]['x']
+                y = el[name]['y']
+                z = el[name]['z']
+                self.Ixx += subsystem.dry_mass*((y - Cgrocket[1])**2 + (z - Cgrocket[2])**2)
+                self.Iyy += subsystem.dry_mass*((x - Cgrocket[0])**2 + (z - Cgrocket[2])**2)
+                self.Izz += subsystem.dry_mass*((x - Cgrocket[0])**2 + (y - Cgrocket[1])**2)
 
     def log(self, *args):
         logger = logging.getLogger('mission')

@@ -270,17 +270,19 @@ class Subsystem(Assembly):
             #TODO: Use el[name['mass']] or name.dry_mass?
             el = self.equipment_list     
             for name in el:                           
-                r = el[name['radius']]
-                L = el[name['length']]
                 dm = name.dry_mass 
                 self.Mx += dm*el[name['x']]
                 self.My += dm*el[name['y']]
                 self.Mz += dm*el[name['z']] 
                 if el[name['shape']] == 'Solid_Cylinder':
+                    r = el[name['radius']]
+                    L = el[name['length']]
                     self.Ioyy += (dm/12)*((3*r)**2 + (L*2))
                     self.Iozz += self.Ioyy
                     self.Ioxx += dm*(r)**2
                 elif el[name['shape']] == 'Hollow_Cylinder':
+                    r = el[name['radius']]
+                    L = el[name['length']]
                     self.Ioyy += (dm/12)*((6*r)**2 + (L*2))
                     self.Iozz += self.Ioyy
                     self.Ioxx += dm*(r)**2

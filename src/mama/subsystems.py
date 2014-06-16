@@ -83,20 +83,15 @@ class CargoSubsystem(Subsystem):
         self.force_execute = True  # force execution to 'undrop' expendable subsystem
         self._dropped = False
 
-        self.add_equipment('Cargo',{
-            'fixed_mass': self.fixed_mass,
-            'x': 0.0
-            'y': 0.0
-            'z': 0.0
-            'radius': 0.00
-            'length': 0.00
-            'shape': 'Solid_Cylinder'
-            })
+        self.add_equipment('Cargo', Equipment())
 
     def execute(self):
         """ reset dropped flag before executing
         """
         self._dropped = False
+
+        self.equipment_list['Cargo'].mass = self.mass_cargo
+
         super(CargoSubsystem, self).execute()
 
     def drop(self):
@@ -105,19 +100,7 @@ class CargoSubsystem(Subsystem):
         # print "DROPPING", self.get_pathname(), self
         self._dropped = True
 
+        self.equipment_list['Cargo'].mass = 0
+
         self.dry_mass = self.fixed_mass
         self.wet_mass = self.fixed_mass
-
-    def update_dry_mass(self):
-        """ Update the dry mass of the subsystem.
-            Overridden: if dropped, then dry mass is just the fixed mass
-        """
-        self.dry_mass = self.fixed_mass * (1 + self.dwc)
-        if not self._dropped:
-            self.dry_mass += self.mass_cargo
-
-    def update_wet_mass(self):
-        """ Update the wet mass of the subsystem.
-        """
-        # wet_mass is always same as dry mass
-        self.wet_mass = self.dry_mass

@@ -193,8 +193,7 @@ class Stage(Subsystem):
 
         self.log('    thrust/weight, initial = %1.3f\n' % TW,
                  '    thrust/weight, final = %1.3f\n' % TWfinal,
-                 '    burn time = %1.3f min' % (fuel_nominal*Isp/TW)/60.0,
-                 '    burn time = %1.3f min' % (thrust/Isp)/60.0)
+                 '    burn time = %1.3f min' % burn_time)
 
         return burn_time
 

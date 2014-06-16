@@ -263,13 +263,10 @@ class Subsystem(Assembly):
                 self.Ioxx += subsystem.Ioxx
                 self.Ioyy += subsystem.Ioyy
                 self.Iozz += subsystem.Iozz
-            moments = [self.Mx, self.My, self.Mz]
-            self.Cg = [moment/self.dry_mass for moment in moments]
-        else: 
-            """If no subsystems, roll up from equipment list"""
-            #TODO: Use el[name['mass']] or name.dry_mass?
-            el = self.equipment_list     
-            for name in el:                           
+        el = self.equipment_list 
+        if len(el) > 0
+            """roll up properties from equipment_list""" 
+            for name in el:                          
                 dm = name.dry_mass 
                 self.Mx += dm*el[name]['x']
                 self.My += dm*el[name]['y']
@@ -290,8 +287,8 @@ class Subsystem(Assembly):
                     self.Ioxx += el[name]['Ioxx']
                     self.Ioyy += el[name]['Ioyy']
                     self.Iozz += el[name]['Iozz']
-            moments = [self.Mx, self.My, self.Mz]
-            self.Cg = [moment/self.dry_mass for moment in moments]
+        moments = [self.Mx, self.My, self.Mz]
+        self.Cg = [moment/self.dry_mass for moment in moments]
 
     Cgrocket = List([0.0, 0.0, 0.0], iotype='in',
         desc='center of gravity for entire system')

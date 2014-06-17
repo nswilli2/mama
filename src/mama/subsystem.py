@@ -360,6 +360,9 @@ class Subsystem(Assembly):
         if len(el) > 0:
             # roll up properties from equipment_list
             for name in el:
+                el['name'].x += self.xbase
+                el['name'].y += self.ybase
+                el['name'].z += self.zbase
                 x = el[name].x
                 y = el[name].y
                 z = el[name].z

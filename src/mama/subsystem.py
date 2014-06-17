@@ -24,9 +24,6 @@ class Equipment(Component):
     x      = Float(0.0, iotype='in', desc='x location of component in its subsystem')
     y      = Float(0.0, iotype='in', desc='y location of component in its subsystem')
     z      = Float(0.0, iotype='in', desc='z location of component in its subsystem')
-    xbase  = Float(0.0, iotype='in', desc='x location of subsystem in its parent subsystem')
-    ybase  = Float(0.0, iotype='in', desc='y location of subsystem in its parent subsystem')
-    zbase  = Float(0.0, iotype='in', desc='z location of subsystem in its parent subsystem')
     radius = Float(0.0, iotype='in', desc='effective radius of component')
     length = Float(0.0, iotype='in', desc='effective length of component')
     shape  = Str('Solid_Cylinder', iotype='in', desc='reference shape for component')
@@ -41,9 +38,9 @@ class Equipment(Component):
     def mass_properties(self):
         properties = {}
 
-        properties['Mx'] = self.mass * (self.x + self.xbase)
-        properties['My'] = self.mass * (self.y + self.ybase)
-        properties['Mz'] = self.mass * (self.z + self.zbase)
+        properties['Mx'] = self.mass * self.x
+        properties['My'] = self.mass * self.y
+        properties['Mz'] = self.mass * self.z
 
         if self.shape == 'Solid_Cylinder':
             r = self.radius
@@ -322,6 +319,9 @@ class Subsystem(Assembly):
             # roll up properties from equipment_list
             for name in el:
                 mp = el['name'].mass_properties()
+                el['name'].x += self.xbase
+                el['name'].y += self.ybase
+                el['name'].z += self.zbase
                 self.Mx += mp['Mx']
                 self.My += mp['My']
                 self.Mz += mp['Mz']

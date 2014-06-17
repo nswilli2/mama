@@ -24,6 +24,9 @@ class Equipment(Component):
     x      = Float(0.0, iotype='in', desc='x location of component in its subsystem')
     y      = Float(0.0, iotype='in', desc='y location of component in its subsystem')
     z      = Float(0.0, iotype='in', desc='z location of component in its subsystem')
+    xbase  = Float(0.0, iotype='in', desc='x location of subsystem in its parent subsystem')
+    ybase  = Float(0.0, iotype='in', desc='y location of subsystem in its parent subsystem')
+    zbase  = Float(0.0, iotype='in', desc='z location of subsystem in its parent subsystem')
     radius = Float(0.0, iotype='in', desc='effective radius of component')
     length = Float(0.0, iotype='in', desc='effective length of component')
     shape  = Str('Solid_Cylinder', iotype='in', desc='reference shape for component')
@@ -38,9 +41,9 @@ class Equipment(Component):
     def mass_properties(self):
         properties = {}
 
-        properties['Mx'] = self.mass * self.x
-        properties['My'] = self.mass * self.y
-        properties['Mz'] = self.mass * self.z
+        properties['Mx'] = self.mass * (self.x + self.xbase)
+        properties['My'] = self.mass * (self.y + self.ybase)
+        properties['Mz'] = self.mass * (self.z + self.zbase)
 
         if self.shape == 'Solid_Cylinder':
             r = self.radius
@@ -55,9 +58,9 @@ class Equipment(Component):
             properties['Iozz'] = properties['Ioyy']
             properties['Ioxx'] = self.mass*r**2
         else:
-            properties['Ioyy'] = 0
-            properties['Iozz'] = 0
-            properties['Ioxx'] = 0
+            properties['Ioyy'] = self.Ioyy
+            properties['Iozz'] = self.Iozz
+            properties['Ioxx'] = self.Ioxx
 
         return properties
 
@@ -344,24 +347,25 @@ class Subsystem(Assembly):
         if len(subsystems) > 0:
             # roll up properties from subsystems
             for subsystem in subsystems:
-                self.get(subsystem).get_inertia()
-                x = subsystem.Cg[0] + self.xbase
-                y = subsystem.Cg[1] + self.ybase
-                z = subsystem.Cg[2] + self.zbase
-                self.Ixx += subsystem.dry_mass*((y - self.Cgrocket[1])**2 + (z - self.Cgrocket[2])**2)
-                self.Iyy += subsystem.dry_mass*((x - self.Cgrocket[0])**2 + (z - self.Cgrocket[2])**2)
-                self.Izz += subsystem.dry_mass*((x - self.Cgrocket[0])**2 + (y - self.Cgrocket[1])**2)
+                sub = self.get(subsystem)
+                sub.get_inertia()
+                x = sub.Cg[0] + self.xbase
+                y = sub.Cg[1] + self.ybase
+                z = sub.Cg[2] + self.zbase
+                self.Ixx += sub.dry_mass*((y - self.Cgrocket[1])**2 + (z - self.Cgrocket[2])**2)
+                self.Iyy += sub.dry_mass*((x - self.Cgrocket[0])**2 + (z - self.Cgrocket[2])**2)
+                self.Izz += sub.dry_mass*((x - self.Cgrocket[0])**2 + (y - self.Cgrocket[1])**2)
 
         el = self.equipment_list
         if len(el) > 0:
             # roll up properties from equipment_list
             for name in el:
-                x = el[name]['x']
-                y = el[name]['y']
-                z = el[name]['z']
-                self.Ixx += subsystem.dry_mass*((y - self.Cgrocket[1])**2 + (z - self.Cgrocket[2])**2)
-                self.Iyy += subsystem.dry_mass*((x - self.Cgrocket[0])**2 + (z - self.Cgrocket[2])**2)
-                self.Izz += subsystem.dry_mass*((x - self.Cgrocket[0])**2 + (y - self.Cgrocket[1])**2)
+                x = el[name].x
+                y = el[name].y
+                z = el[name].z
+                self.Ixx += sub.dry_mass*((y - self.Cgrocket[1])**2 + (z - self.Cgrocket[2])**2)
+                self.Iyy += sub.dry_mass*((x - self.Cgrocket[0])**2 + (z - self.Cgrocket[2])**2)
+                self.Izz += sub.dry_mass*((x - self.Cgrocket[0])**2 + (y - self.Cgrocket[1])**2)
 
     def log(self, *args):
         logger = logging.getLogger('mission')

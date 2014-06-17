@@ -212,7 +212,7 @@ class Subsystem(Assembly):
                 self.get(subsystem).update_wet_mass()
             self.wet_mass = self.summation(subsystems, 'wet_mass')
             for equipment in self.equipment_list:
-                self.wet_mass += equipment.mass
+                self.wet_mass += self.equipment_list[equipment].mass
             self.wet_mass += self.fixed_mass * (1 + self.dwc)
         else:
             self.wet_mass = self.dry_mass
@@ -264,7 +264,7 @@ class Subsystem(Assembly):
             for key in self.equipment_list:
                 val =  self.equipment_list[key].mass
                 if not isinstance(val, dict):
-                    print >>output, '%s%-30s%10.2f' \
+                    print >>output, '%s%-15sfixed:%10.2f' \
                         % ('  '*(indent+1), key, val)
 
         subsystems = self.get_children(Subsystem)

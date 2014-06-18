@@ -47,7 +47,7 @@ class Equipment(Component):
             L = self.length
             properties['Ioyy'] = (self.mass/12)*((3*r)**2 + (L*2))
             properties['Iozz'] = properties['Ioyy']
-            properties['Ioxx'] = self.mass*(r)**2
+            properties['Ioxx'] = (self.mass*(r)**2)/2
         elif self.shape == 'Hollow_Cylinder':
             r = self.radius
             L = self.length

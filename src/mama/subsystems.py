@@ -83,14 +83,14 @@ class CargoSubsystem(Subsystem):
         self.force_execute = True  # force execution to 'undrop' expendable subsystem
         self._dropped = False
 
-        self.add_equipment('Cargo', Equipment())
+        self.add('cargo', MassItem())
 
     def execute(self):
         """ reset dropped flag before executing
         """
         self._dropped = False
 
-        self.equipment_list['Cargo'].mass = self.mass_cargo
+        self.cargo.mass = self.mass_cargo
 
         super(CargoSubsystem, self).execute()
 
@@ -100,7 +100,4 @@ class CargoSubsystem(Subsystem):
         # print "DROPPING", self.get_pathname(), self
         self._dropped = True
 
-        self.equipment_list['Cargo'].mass = 0
-
-        self.dry_mass = self.fixed_mass
-        self.wet_mass = self.fixed_mass
+        self.cargo.mass = self.mass_cargo = 0

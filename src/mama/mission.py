@@ -276,7 +276,7 @@ class Mission(Assembly):
         print >>output, 'Mission:', self.description
         print >>output, ''
         if self.spacecraft is not None:
-            self.spacecraft.display(output=output, show_equipment=True)
+            self.spacecraft.display(output=output)
         else:
             print >>output, 'No spacecraft is assigned.'
         print >>output, ''

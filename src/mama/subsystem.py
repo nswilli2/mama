@@ -251,7 +251,6 @@ class Subsystem(Assembly):
         items = self.get_children(MassItem)
         # self.wet_mass += self.summation(items, 'mass')
         for item in items:
-            print item, 'mass:', self.get(item).mass
             self.wet_mass += self.get(item).mass
 
     def update_mass_properties(self):

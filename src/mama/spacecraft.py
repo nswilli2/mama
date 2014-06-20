@@ -336,21 +336,12 @@ class Spacecraft(Subsystem):
         """ drop the specified subsystem and update masses
         """
         self.get(subsystem).drop()
-        self.update_dry_mass()
         self.update_wet_mass()
-
-    # def drop_mass(self, stage, mass):
-    #     """ subtract the specified mass from the stage
-    #     """
-    #     self.get_stage(stage).drop_mass(mass)
-    #     self.update_dry_mass()
-    #     self.update_wet_mass()
 
     def pickup_mass(self, stage, mass):
         """ add the specified mass to the stage
         """
         self.get_stage(stage).pickup_mass(mass)
-        self.update_dry_mass()
         self.update_wet_mass()
 
     def expend_consumables(self, duration):

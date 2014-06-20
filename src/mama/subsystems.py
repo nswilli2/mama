@@ -83,11 +83,8 @@ class CargoSubsystem(Subsystem):
         self.force_execute = True  # force execution to 'undrop' expendable subsystem
         self._dropped = False
 
-<<<<<<< HEAD
-=======
         self.add('cargo', MassItem())
 
->>>>>>> dev
     def execute(self):
         """ reset dropped flag before executing
         """

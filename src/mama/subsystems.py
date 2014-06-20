@@ -10,7 +10,7 @@ from zope.interface import Interface, Attribute, implements
 
 
 class IPropulsion(Interface):
-    """Interface for a subsystem that provides propulsion."""
+    """Interface for a component/subsystem that provides propulsion."""
 
     thrust = Attribute("Thrust")
 
@@ -18,7 +18,7 @@ class IPropulsion(Interface):
 
 
 class IRCS(Interface):
-    """Interface for a subsystem that provides reaction control."""
+    """Interface for a component/subsystem that provides reaction control."""
 
     thrust = Attribute("Thrust")
 
@@ -38,7 +38,7 @@ class IRCS(Interface):
 
 
 class IFuelSystem(Interface):
-    """Interface for a subsystem that provides fuel."""
+    """Interface for a component/subsystem that provides fuel."""
 
     def get_fuel():
         """Get mass of fuel in the fuel system.
@@ -54,7 +54,7 @@ class IFuelSystem(Interface):
 
 
 class IExpendable(Interface):
-    """ Interface for a subsystem than can be jettisoned. """
+    """ Interface for a component/subsystem than can be jettisoned. """
 
     dropped = Attribute("flag indicating if the subsystem has been dropped")
 
@@ -64,7 +64,7 @@ class IExpendable(Interface):
 
 
 class CargoSubsystem(Subsystem):
-    """ a Fuel Subsystem. """
+    """ a Cargo Subsystem. """
 
     implements(IExpendable)
 
@@ -83,7 +83,7 @@ class CargoSubsystem(Subsystem):
         self.force_execute = True  # force execution to 'undrop' expendable subsystem
         self._dropped = False
 
-        self.add('cargo', MassItem())
+        self.add('cargo', Equipment())
 
     def execute(self):
         """ reset dropped flag before executing
@@ -100,4 +100,4 @@ class CargoSubsystem(Subsystem):
         # print "DROPPING", self.get_pathname(), self
         self._dropped = True
 
-        self.cargo.mass = self.mass_cargo = 0
+        self.cargo.mass = 0

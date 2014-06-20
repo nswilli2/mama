@@ -9,18 +9,16 @@ import logging
 from zope.interface import Interface
 
 from openmdao.main.api import Assembly, Component
-from openmdao.lib.datatypes.api import Str, Float, List, Bool
+from openmdao.lib.datatypes.api import Str, Float, List
 from openmdao.main.mp_support import has_interface
 
 
 class MassItem(Component):
-    """ an individual item within a subsystem that has mass properties
+    """ a component that computes mass properties for an item within a subsystem
     """
 
     # inputs
     mass   = Float(0.0, iotype='in', units='kg', desc='mass')
-
-    fluid  = Bool(False, iotype='in', desc='indicates if the item is a fluid')
 
     shape  = Str('Solid_Cylinder', iotype='in', desc='reference shape for item')
 
@@ -70,6 +68,19 @@ class MassItem(Component):
         self.Mx = self.mass * self.x
         self.My = self.mass * self.y
         self.Mz = self.mass * self.z
+
+
+class Equipment(MassItem):
+    """ a piece of equipment within a subsystem
+        calculates mass properties
+    """
+
+
+class Fluid(MassItem):
+    """ a mass of fluid within a subsystem
+        calculates mass properties
+        Future Work: implement pendulum method per "SwRI_SLOSH_Update.pdf"
+    """
 
 
 class Subsystem(Assembly):
@@ -166,9 +177,9 @@ class Subsystem(Assembly):
         items = self.get_children(MassItem)
         for item in items:
             self.driver.workflow.add(item)
-            dry_masses.append(item+'.mass')
-            if self.get(item).fluid:
-                wet_masses.append(item+'.mass')
+            if not isinstance(self.get(item), Fluid):
+                dry_masses.append(item+'.mass')
+            wet_masses.append(item+'.mass')
 
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:
@@ -273,7 +284,7 @@ class Subsystem(Assembly):
                 self.Ioyy += subsystem.Ioyy
                 self.Iozz += subsystem.Iozz
 
-        # roll up properties from items
+        # roll up properties from equipment and fluids
         items = self.get_children(MassItem)
         if len(items) > 0:
             for name in items:

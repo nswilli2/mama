@@ -193,8 +193,7 @@ class Stage(Subsystem):
 
         self.log('    thrust/weight, initial = %1.3f\n' % TW,
                  '    thrust/weight, final = %1.3f\n' % TWfinal,
-                 '    burn time = %1.3f min' % (fuel_nominal*Isp/TW)/60.0,
-                 '    burn time = %1.3f min' % (thrust/Isp)/60.0)
+                 '    burn time = %1.3f min' % burn_time)
 
         return burn_time
 
@@ -227,20 +226,21 @@ class Spacecraft(Subsystem):
         self.add_fuel()  # fill all fuel tanks to capacity
         super(Spacecraft, self).execute()
         self.log('')
-        self.log(self.__str__(show_equipment=True))
+        self.log(self.__str__())
+        self.display()
 
-    def __str__(self, show_equipment=False):
+    def __str__(self):
         output = StringIO.StringIO()
-        self.display(output=output, show_equipment=show_equipment)
+        self.display(output=output)
         return output.getvalue()
 
-    def display(self, indent=0, output=sys.stdout, show_equipment=False):
+    def display(self, indent=0, output=sys.stdout):
         """ displays details about the spacecraft.
         """
         print >>output, '%s%-20.20s\tdry:%10.2f\twet:%10.2f' \
             % ('  '*indent, self.name, self.dry_mass, self.wet_mass)
         for stage in self.stages:
-            stage.display(indent+1, output=output, show_equipment=show_equipment)
+            stage.display(indent+1, output=output)
             print >>output, ''
 
         # extra: display total fuel boiloff
@@ -336,21 +336,12 @@ class Spacecraft(Subsystem):
         """ drop the specified subsystem and update masses
         """
         self.get(subsystem).drop()
-        self.update_dry_mass()
         self.update_wet_mass()
-
-    # def drop_mass(self, stage, mass):
-    #     """ subtract the specified mass from the stage
-    #     """
-    #     self.get_stage(stage).drop_mass(mass)
-    #     self.update_dry_mass()
-    #     self.update_wet_mass()
 
     def pickup_mass(self, stage, mass):
         """ add the specified mass to the stage
         """
         self.get_stage(stage).pickup_mass(mass)
-        self.update_dry_mass()
         self.update_wet_mass()
 
     def expend_consumables(self, duration):

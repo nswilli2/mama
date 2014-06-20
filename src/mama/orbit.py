@@ -32,6 +32,11 @@ class Orbit(Component):
     G = Float(6.67384e-11, iotype='out',
         desc='gravitational constant (m^3/kg-s^2)')
 
+    def __init__(self, body='Earth'):
+        # default to Earth orbit
+        self.body = body
+        super(Orbit, self).__init__()
+
     def __str__(self):
         return 'Orbiting %s at %1.1f X %1.1f km with inclination %1.1f, period %1.1fhr' \
             %  (self.body, self.periapsis, self.apoapsis, self.inclination, self.period()/3600)

@@ -54,7 +54,7 @@ class MassItem(Component):
             self.Cg   = [L/2.0, 0.0, 0.0]
             self.Ioyy = (self.mass/12)*((3*r)**2 + (L*2))
             self.Iozz = self.Ioyy
-            self.Ioxx = self.mass*(r)**2
+            self.Ioxx = (self.mass*(r)**2)/2.0
         elif self.shape == 'Hollow_Cylinder':
             r = self.radius
             L = self.length
@@ -70,6 +70,7 @@ class MassItem(Component):
         self.Mx = self.mass * self.x
         self.My = self.mass * self.y
         self.Mz = self.mass * self.z
+
 
 class Subsystem(Assembly):
     """ A subsystem.
@@ -259,11 +260,13 @@ class Subsystem(Assembly):
         self.Ioxx = 0
         self.Ioyy = 0
         self.Iozz = 0
+
         # roll up properties from subsystems
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:
             for name in subsystems:
                 subsystem = self.get(name)
+                subsystem.update_mass_properties
                 self.Mx += subsystem.wet_mass*(subsystem.Cg[0] + self.x)
                 self.My += subsystem.wet_mass*(subsystem.Cg[1] + self.y)
                 self.Mz += subsystem.wet_mass*(subsystem.Cg[2] + self.z)
@@ -295,17 +298,18 @@ class Subsystem(Assembly):
 
     def get_inertia(self):
         """ calculate moments of inertia
-            get_mass_properties must be executed first in order to determine Cgrocket
+            update_mass_properties must be executed first in order to determine Cgrocket
         """
         self.Ixx = 0
         self.Iyy = 0
         self.Izz = 0
 
+        # roll up properties from subsystems
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:
-            # roll up properties from subsystems
-            for subsystem in subsystems:
-                self.get(subsystem).get_inertia()
+            for name in subsystems:
+                subsystem = self.get(name)
+                subsystem.get_inertia()
                 x = subsystem.Cg[0] + self.x
                 y = subsystem.Cg[1] + self.y
                 z = subsystem.Cg[2] + self.z
@@ -313,16 +317,15 @@ class Subsystem(Assembly):
                 self.Iyy += subsystem.dry_mass*((x - self.Cgrocket[0])**2 + (z - self.Cgrocket[2])**2)
                 self.Izz += subsystem.dry_mass*((x - self.Cgrocket[0])**2 + (y - self.Cgrocket[1])**2)
 
-        el = self.items
-        if len(el) > 0:
-            # roll up properties from items
-            for name in el:
-                x = el[name]['x']
-                y = el[name]['y']
-                z = el[name]['z']
-                self.Ixx += subsystem.dry_mass*((y - self.Cgrocket[1])**2 + (z - self.Cgrocket[2])**2)
-                self.Iyy += subsystem.dry_mass*((x - self.Cgrocket[0])**2 + (z - self.Cgrocket[2])**2)
-                self.Izz += subsystem.dry_mass*((x - self.Cgrocket[0])**2 + (y - self.Cgrocket[1])**2)
+        # roll up properties from items
+        items = self.get_children(MassItem)
+        if len(items) > 0:
+            for name in items:
+                item = self.get(name)
+                item.get_inertia()
+                self.Ixx += item.dry_mass*((item.y - self.Cgrocket[1])**2 + (item.z - self.Cgrocket[2])**2)
+                self.Iyy += item.dry_mass*((item.x - self.Cgrocket[0])**2 + (item.z - self.Cgrocket[2])**2)
+                self.Izz += item.dry_mass*((item.x - self.Cgrocket[0])**2 + (item.y - self.Cgrocket[1])**2)
 
     def log(self, *args):
         logger = logging.getLogger('mission')

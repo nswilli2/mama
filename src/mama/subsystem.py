@@ -244,11 +244,13 @@ class Subsystem(Assembly):
         """ Update the wet mass of the subsystem to account for fuel burn, etc.
             (without re-executing everything)
         """
+        self.wet_mass = 0
+
         subsystems = self.get_children(Subsystem)
         if len(subsystems) > 0:
             for subsystem in subsystems:
                 self.get(subsystem).update_wet_mass()
-            self.wet_mass = self.summation(subsystems, 'wet_mass')
+            self.wet_mass += self.summation(subsystems, 'wet_mass')
 
         items = self.get_children(MassItem)
         # self.wet_mass += self.summation(items, 'mass')

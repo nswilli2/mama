@@ -227,7 +227,6 @@ class Spacecraft(Subsystem):
         super(Spacecraft, self).execute()
         self.log('')
         self.log(self.__str__())
-        self.display()
 
     def __str__(self):
         output = StringIO.StringIO()

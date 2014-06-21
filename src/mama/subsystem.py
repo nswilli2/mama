@@ -240,15 +240,6 @@ class Subsystem(Assembly):
             for subsystem in subsystems:
                 self.get(subsystem).display(indent+1, output)
 
-    def execute(self):
-        """ Override to calculate subsystem dependent properties from input parameters.
-            The default is just to calculate mass properties.
-        """
-        super(Subsystem, self).execute()
-        if self.wet_mass == 0:
-            self.wet_mass = self.dry_mass
-        # self.update_mass_properties()
-
     def update_wet_mass(self):
         """ Update the wet mass of the subsystem to account for fuel burn, etc.
             (without re-executing everything)

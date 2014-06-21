@@ -257,6 +257,9 @@ class Subsystem(Assembly):
         for item in items:
             self.wet_mass += self.get(item).mass
 
+        if self.wet_mass == 0:
+            self.wet_mass = self.dry_mass
+
     def update_mass_properties(self):
         self.Mx = 0
         self.My = 0

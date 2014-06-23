@@ -273,7 +273,7 @@ class Subsystem(Assembly):
         if len(subsystems) > 0:
             for name in subsystems:
                 subsystem = self.get(name)
-                subsystem.update_mass_properties
+                subsystem.update_mass_properties()
                 self.Mx += subsystem.wet_mass*(subsystem.Cg[0] + self.x)
                 self.My += subsystem.wet_mass*(subsystem.Cg[1] + self.y)
                 self.Mz += subsystem.wet_mass*(subsystem.Cg[2] + self.z)
@@ -329,7 +329,6 @@ class Subsystem(Assembly):
         if len(items) > 0:
             for name in items:
                 item = self.get(name)
-                item.get_inertia()
                 self.Ixx += item.dry_mass*((item.y - self.Cgrocket[1])**2 + (item.z - self.Cgrocket[2])**2)
                 self.Iyy += item.dry_mass*((item.x - self.Cgrocket[0])**2 + (item.z - self.Cgrocket[2])**2)
                 self.Izz += item.dry_mass*((item.x - self.Cgrocket[0])**2 + (item.y - self.Cgrocket[1])**2)

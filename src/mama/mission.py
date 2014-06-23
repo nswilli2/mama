@@ -298,6 +298,7 @@ class Mission(Assembly):
     def initialize_log(self):
         """ initialize the mission log
         """
+        # if not hasattr(self, 'logger'):   # if you want to see every iteration
         self.logger = logging.getLogger('mission')
         for handler in self.logger.handlers:
             self.logger.removeHandler(handler)

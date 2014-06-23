@@ -186,14 +186,15 @@ class Stage(Subsystem):
             # expend fuel from the RCS system that was used
             self.expend_prop(fuel_burn)
 
-        # final thrust to weight & burn time
-        TWfinal = thrust/(mass - fuel_nominal)
-        burn_time = (fuel_nominal*Isp/TW)/60.0
-        burn_time = (thrust/Isp)/60.0
+        # final thrust to weight
+        TWfinal = thrust/(mass - fuel_burn)
+        self.log('    final mass (nominal) =', mass - fuel_nominal)
+        self.log('    thrust/weight: initial = %1.3f, final = %1.3f' % (TW, TWfinal))
 
-        self.log('    thrust/weight, initial = %1.3f\n' % TW,
-                 '    thrust/weight, final = %1.3f\n' % TWfinal,
-                 '    burn time = %1.3f min' % burn_time)
+        # burn time
+        # http://mmae.iit.edu/~mpeet/Classes/MMAE441/Spacecraft/441Lecture20.pdf
+        burn_time = (mass * dV) / thrust
+        self.log('    burn time = %1.3f' % burn_time)
 
         return burn_time
 
@@ -227,7 +228,6 @@ class Spacecraft(Subsystem):
         super(Spacecraft, self).execute()
         self.log('')
         self.log(self.__str__())
-        self.display()
 
     def __str__(self):
         output = StringIO.StringIO()
@@ -441,14 +441,14 @@ class Spacecraft(Subsystem):
             # expend fuel from the RCS system that was used
             self.expend_prop(stage, fuel_burn)
 
-        # final thrust to weight & burn time
+        # final thrust to weight
         TWfinal = thrust/(mass - fuel_burn)
         self.log('    final mass (nominal) =', mass - fuel_nominal)
-        self.log('    thrust/weight: initial = %1.3f' % TW, ', final = %1.3f\n' % TWfinal)
+        self.log('    thrust/weight: initial = %1.3f, final = %1.3f' % (TW, TWfinal))
 
-        # burn_time = (fuel_nominal*Isp/TW)/60.0
-        mdot = thrust / (Isp * g)
-        burn_time = fuel_nominal / mdot
+        # burn time
+        # http://mmae.iit.edu/~mpeet/Classes/MMAE441/Spacecraft/441Lecture20.pdf
+        burn_time = (mass * dV) / thrust
         self.log('    burn time = %1.3f' % burn_time)
 
         return burn_time
